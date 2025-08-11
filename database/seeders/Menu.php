@@ -94,8 +94,17 @@ class Menu extends Seeder
                 'label_name' => 'Devices',
                 'controller_name' => 'app\Http\Controllers\RfidManagement\DevicesController',
                 'route_name' => 'rfid-management.devices.index',
-                'url' => 'rfid-rfid-management/devices',
+                'url' => 'rfid-management/devices',
                 'sort_num' => '9',
+                'is_divider' => false
+            ],
+            [
+                'icon' => 'FileClock',
+                'label_name' => 'Log RFID Scan',
+                'controller_name' => 'app\Http\Controllers\RfidManagement\LogScanController',
+                'route_name' => 'rfid-management.log-scan.index',
+                'url' => 'rfid-management/log-scan',
+                'sort_num' => '10',
                 'is_divider' => false
             ],
         ];
