@@ -1,4 +1,4 @@
-import { supabase } from '@/supabase';
+import { supabase } from '@/services/supabase';
 import { Ref, onMounted, onUnmounted } from 'vue';
 
 export function useSupabaseTableSync<T extends { id: any }>(
