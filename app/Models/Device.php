@@ -15,9 +15,16 @@ class Device extends Model
         'device_uid',
         'location',
         'ip_address',
-        'status',
+        'is_active',
         'last_seen_at',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_active' => 'boolean',
+        ];
+    }
 
     // Relasi 1 device punya banyak scan
     public function scans(): HasMany
