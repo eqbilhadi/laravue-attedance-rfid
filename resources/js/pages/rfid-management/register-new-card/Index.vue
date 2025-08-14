@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { type BreadcrumbItem } from '@/types'
-import { router, Head, useForm } from '@inertiajs/vue3'
+import { Head, useForm } from '@inertiajs/vue3'
+import { connectMqtt, disconnectMqtt, subscribe } from '@/services/mqtt'
+import { watchDebounced } from '@vueuse/core'
+
 import AppLayout from '@/layouts/AppLayout.vue'
-import Input from "@/components/ui/input/Input.vue";
-import Label from "@/components/ui/label/Label.vue";
-import Button from "@/components/ui/button/Button.vue";
-import { Check, ChevronsUpDown, Search } from 'lucide-vue-next'
-import { toast } from 'vue-sonner';
-import 'vue-sonner/style.css'
-import { X } from 'lucide-vue-next';
-import type { User } from '@/types'
+import Input from '@/components/ui/input/Input.vue'
+import Label from '@/components/ui/label/Label.vue'
+import Button from '@/components/ui/button/Button.vue'
+import InputError from '@/components/InputError.vue'
+
 import {
   Combobox,
   ComboboxAnchor,
@@ -22,105 +22,101 @@ import {
   ComboboxList,
   ComboboxTrigger,
 } from '@/components/ui/combobox'
+
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
 
-import mqtt, { MqttClient, IClientOptions } from 'mqtt'
-import { watchDebounced } from '@vueuse/core';
+import {
+  Check,
+  ChevronsUpDown,
+  Search,
+  LoaderCircle,
+  X,
+} from 'lucide-vue-next'
+
+import type { User } from '@/types'
 
 type Form = {
   uid: string
-  user: User | string | null
+  user_id: string
 }
 
+// ----------- STATE -------------
+const selectedUser = ref<User | null>(null)
+const search = ref('')
+const users = ref<User[]>([])
+const isLoading = ref(false)
 
-// State
-const status = ref<'connecting' | 'connected' | 'disconnected'>('connecting')
 const form = useForm<Form>({
   uid: '',
-  user: '',
+  user_id: ''
 })
 
-// MQTT Config
-const brokerUrl = 'wss://6f7e4be549454cf493675cf1b528d102.s1.eu.hivemq.cloud:8884/mqtt'
-const options: IClientOptions = {
-  username: 'laravel12_user',
-  password: 'Laravel12_password',
-  protocol: 'wss',
-  clientId: 'vue-app-client-' + Math.random().toString(16).substr(2, 8),
+// ----------- MQTT MESSAGE HANDLER -------------
+function handleMqttMessage(topic: string, payload: Buffer) {
+  if (topic === 'alat/rfid') {
+    try {
+      const message = JSON.parse(payload.toString())
+      if (message.uid) {
+        form.uid = message.uid
+      }
+    } catch {
+      console.warn("Invalid MQTT message payload")
+    }
+  }
 }
 
-let client: MqttClient
-
+// ----------- LIFE CYCLE -------------
 onMounted(() => {
-  client = mqtt.connect(brokerUrl, options)
-
-  client.on('connect', () => {
-    status.value = 'connected'
-    console.log('Connected to HiveMQ MQTT broker')
-
-    client.subscribe('alat/rfid')
-  })
-
-  client.on('message', (topic, message) => {
-    if (topic === 'alat/rfid') {
-      const payload = JSON.parse(message.toString())
-
-      if (payload.uid) {
-        form.uid = payload.uid
-      } else {
-        form.uid = ""
-        toast.error("Card detected, but the device is not in Registration mode.")
-      }
-    }
-  })
-
-  client.on('error', (err) => {
-    status.value = 'disconnected'
-    console.error('MQTT error:', err)
-  })
-
-  client.on('close', () => {
-    status.value = 'disconnected'
-    console.log('Disconnected from MQTT broker')
-  })
+  const client = connectMqtt(handleMqttMessage)
+  subscribe("alat/rfid")
 })
 
 onBeforeUnmount(() => {
-  if (client?.connected) {
-    client.end()
-  }
+  disconnectMqtt()
 })
 
-const search = ref('')
-const users = ref<User[]>([])
-
-const fetchUsers = async (query: string) => {
+// ----------- USER SEARCH -------------
+async function fetchUsers(query: string) {
+  isLoading.value = true
   try {
     const response = await fetch(`/user-search?search=${encodeURIComponent(query)}`)
-    const result = await response.json()
-    users.value = result
+    users.value = await response.json()
   } catch (error) {
     console.error('Fetch failed', error)
     users.value = []
+  } finally {
+    isLoading.value = false
   }
 }
 
-// Fetch when input changes
 watchDebounced(search, (newQuery) => {
   if (newQuery.length > 1) {
     fetchUsers(newQuery)
   } else {
     users.value = []
   }
+}, { debounce: 500 })
+
+watch(() => form.user_id, (id) => {
+  selectedUser.value = users.value.find(user => user.id === id) ?? null
 })
 
+// ----------- FORM SUBMIT -------------
+function handleSubmit() {
+  form.post(route("rfid-management.register-new-card.store"), {
+    onSuccess: () => {
+      form.reset()
+    }
+  })
+}
+
+// ----------- BREADCRUMBS -------------
 const breadcrumbs: BreadcrumbItem[] = [
   { title: 'RFID Management', href: '' },
   { title: 'Register New Card', href: route('rfid-management.register-new-card.index') },
@@ -148,7 +144,7 @@ const breadcrumbs: BreadcrumbItem[] = [
         <CardContent class="space-y-4">
           <div class="w-full max-w-4xl space-y-6 mx-auto">
             <!-- Registration Form -->
-            <form class="space-y-6">
+            <form @submit.prevent="handleSubmit" class="space-y-6">
               <fieldset class="space-y-4">
                 <!-- RFID UID -->
                 <div class="grid gap-2">
@@ -166,16 +162,17 @@ const breadcrumbs: BreadcrumbItem[] = [
                       <X />
                     </Button>
                   </div>
+                  <InputError :message="form.errors.uid" />
                 </div>
 
                 <!-- User Input -->
                 <div class="grid gap-2">
                   <Label for="icon">User</Label>
-                  <Combobox v-model="form.user" by="id">
+                  <Combobox v-model="form.user_id" by="id">
                     <ComboboxAnchor as-child>
                       <ComboboxTrigger as-child>
                         <Button variant="outline" class="justify-between w-full font-normal">
-                          {{ form.user?.name ?? 'Pilih user' }}
+                          {{ selectedUser?.name ?? 'Select user' }}
                           <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </ComboboxTrigger>
@@ -185,7 +182,8 @@ const breadcrumbs: BreadcrumbItem[] = [
                       <div class="relative w-full items-center">
                         <ComboboxInput
                           v-model="search"
-                          placeholder="Cari user..."
+                          :display-value="(val) => ''"
+                          placeholder="Search user by name..."
                           class="pl-2 focus-visible:ring-0 rounded-none h-10"
                         />
                         <span class="absolute start-0 inset-y-0 flex items-center justify-center px-3">
@@ -194,14 +192,22 @@ const breadcrumbs: BreadcrumbItem[] = [
                       </div>
 
                       <ComboboxEmpty>
-                        Tidak ada user ditemukan.
+                        <div v-if="isLoading" class="flex justify-center text-sm">
+                          <div class="flex items-center space-x-2">
+                            <LoaderCircle class="size-4 animate-spin" />
+                            <span>Searching user...</span>
+                          </div>
+                        </div>
+                        <div v-else>
+                          User Not Found
+                        </div>
                       </ComboboxEmpty>
 
                       <ComboboxGroup>
                         <ComboboxItem
                           v-for="user in users"
                           :key="user.id"
-                          :value="user"
+                          :value="user.id"
                         >
                           {{ user.name }}
                           <ComboboxItemIndicator>
@@ -211,10 +217,16 @@ const breadcrumbs: BreadcrumbItem[] = [
                       </ComboboxGroup>
                     </ComboboxList>
                   </Combobox>
+                  <InputError :message="form.errors.user_id" />
                 </div>
-
-                
               </fieldset>
+              <!-- Action Buttons -->
+              <div class="flex items-center justify-end gap-3 mt-6">
+                <Button type="submit" :disabled="form.processing" tabindex="14">
+                  <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin" />
+                  Save
+                </Button>
+              </div>
             </form>
           </div>
         </CardContent>
