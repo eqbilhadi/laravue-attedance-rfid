@@ -13,7 +13,11 @@ return new class extends Migration
     {
         Schema::create('sys_rfid_scans', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('device_uid')->constrained('sys_devices')->cascadeOnDelete();
+            $table->string('device_uid', 20);
+            $table->foreign('device_uid')
+                ->references('device_uid')
+                ->on('sys_devices')
+                ->cascadeOnDelete();
             $table->string('card_uid');
             $table->timestamps();
         });

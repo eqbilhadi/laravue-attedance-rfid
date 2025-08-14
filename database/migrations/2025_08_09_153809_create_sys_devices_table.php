@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('device_uid')->unique();
             $table->string('location')->nullable();
             $table->string('ip_address')->nullable();
-            $table->enum('status', ['online', 'offline'])->default('offline');
+            $table->boolean('is_active')->default(true);
             $table->timestamp('last_seen_at')->nullable();
             $table->timestamps();
         });
