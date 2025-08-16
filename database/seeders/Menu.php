@@ -100,11 +100,20 @@ class Menu extends Seeder
             ],
             [
                 'icon' => 'FileClock',
-                'label_name' => 'Log RFID Scan',
+                'label_name' => 'Log Scan',
                 'controller_name' => 'app\Http\Controllers\RfidManagement\LogScanController',
                 'route_name' => 'rfid-management.log-scan.index',
                 'url' => 'rfid-management/log-scan',
                 'sort_num' => '10',
+                'is_divider' => false
+            ],
+            [
+                'icon' => 'IdCard',
+                'label_name' => 'Card List',
+                'controller_name' => 'app\Http\Controllers\RfidManagement\CardListController',
+                'route_name' => 'rfid-management.card.index',
+                'url' => 'rfid-management/card',
+                'sort_num' => '11',
                 'is_divider' => false
             ],
         ];

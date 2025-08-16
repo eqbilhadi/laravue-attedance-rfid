@@ -9,6 +9,7 @@ class RfidResource extends JsonResource
 {   
     public bool $status;
     public string $message;
+    public string $title;
     public $resource;
 
     /**
@@ -20,11 +21,12 @@ class RfidResource extends JsonResource
      *
      * @return void
      */
-    public function __construct(bool $status, string $message, $resource)
+    public function __construct(bool $status, string $message, string $title, $resource)
     {
         parent::__construct($resource);
         $this->status  = $status;
         $this->message = $message;
+        $this->title = $title;
     }
     
     /**
@@ -37,6 +39,7 @@ class RfidResource extends JsonResource
         return [
             'registered' => $this->status,
             'message' => $this->message,
+            'title' => $this->title,
             'user' => $this->resource
         ];
     }
