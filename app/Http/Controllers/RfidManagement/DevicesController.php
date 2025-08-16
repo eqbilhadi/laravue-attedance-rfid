@@ -13,13 +13,8 @@ class DevicesController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Device::query();
-        if ($request->has('is_active')) {
-            $isActive = filter_var($request->input('is_active'), FILTER_VALIDATE_BOOLEAN);
-            $query->when(!is_null($isActive), function ($query) use ($isActive) {
-                $query->where('is_active', $isActive);
-            });
-        }
+        $query = Device::query()
+            ->when($request->filled('is_active'), fn($query) => $query->where('is_active', $request->input('is_active')));
 
         $data = $query->paginate(10)->withQueryString();
 
@@ -86,7 +81,7 @@ class DevicesController extends Controller
 
         try {
             $device->update($validated);
-            
+
             return redirect()->route('rfid-management.devices.index')->with('success', 'Device updated successfully.');
         } catch (Throwable $e) {
             Log::error('Device update failed', [
