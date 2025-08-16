@@ -156,6 +156,7 @@ function handleDelete(item: User) {
                 { label: 'Inactive', value: '0' },
               ]"
               placeholder="Select Status"
+              clearable
             />
 
             <!-- Gender select -->
@@ -167,6 +168,7 @@ function handleDelete(item: User) {
                 { label: 'Female', value: 'p' },
               ]"
               placeholder="Select Gender"
+              clearable
             />
 
             <!-- Clear button -->

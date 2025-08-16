@@ -6,15 +6,16 @@ use App\Http\Controllers\AccessSettings\NavManagementController;
 use App\Http\Controllers\AccessSettings\RoleManagementController;
 use App\Http\Controllers\AccessSettings\UserManagementController;
 use App\Http\Controllers\AccessSettings\PermissionManagementController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\RfidManagement\DevicesController;
+use App\Http\Controllers\RfidManagement\LogScanController;
 use App\Http\Controllers\RfidManagement\RegisterNewCard;
 
 Route::get('/', function () {
     return Inertia::render('Welcome');
 })->name('home');
 
-Route::get('dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::group(['middleware' => ['auth'], 'prefix' => 'rbac', 'as' => 'rbac.'], function () {
     Route::resource('navigation-management', NavManagementController::class)
@@ -57,10 +58,16 @@ Route::group(['middleware' => ['auth'], 'prefix' => 'rbac', 'as' => 'rbac.'], fu
 });
 
 Route::group(['middleware' => ['auth'], 'prefix' => 'rfid-management', 'as' => 'rfid-management.'], function () {
-     Route::resource('register-new-card', RegisterNewCard::class)
-        ->except('show')
-        ->names('register-new-card')
-        ->whereNumber('sysMenu');
+    Route::resource('register-new-card', RegisterNewCard::class)
+        ->only('index', 'store')
+        ->names('register-new-card');
+
+    Route::get('/devices/check-exists', [DevicesController::class, 'checkExists'])->name('devices.check');
+    Route::resource('devices', DevicesController::class)
+        ->names('devices')
+        ->only('index', 'destroy', 'store', 'update');
+    
+    Route::get('/log-scan', [LogScanController::class, 'index'])->name('log-scan.index');
 });
 
 Route::get('/stream/{path}', function ($path) {
