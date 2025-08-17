@@ -10,6 +10,7 @@ import Input from '@/components/ui/input/Input.vue'
 import Label from '@/components/ui/label/Label.vue'
 import Button from '@/components/ui/button/Button.vue'
 import InputError from '@/components/InputError.vue'
+import 'vue-sonner/style.css'
 
 import {
   Combobox,
@@ -85,7 +86,7 @@ onBeforeUnmount(() => {
 async function fetchUsers(query: string) {
   isLoading.value = true
   try {
-    const response = await fetch(`/user-search?search=${encodeURIComponent(query)}`)
+    const response = await fetch(`/rbac/user-search?search=${encodeURIComponent(query)}`)
     users.value = await response.json()
   } catch (error) {
     console.error('Fetch failed', error)
