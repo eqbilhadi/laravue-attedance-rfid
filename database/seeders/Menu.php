@@ -90,12 +90,21 @@ class Menu extends Seeder
                 'is_divider' => false
             ],
             [
+                'icon' => 'IdCard',
+                'label_name' => 'Card List',
+                'controller_name' => 'app\Http\Controllers\RfidManagement\CardListController',
+                'route_name' => 'rfid-management.card.index',
+                'url' => 'rfid-management/card',
+                'sort_num' => '9',
+                'is_divider' => false
+            ],
+            [
                 'icon' => 'Cpu',
                 'label_name' => 'Devices',
                 'controller_name' => 'app\Http\Controllers\RfidManagement\DevicesController',
                 'route_name' => 'rfid-management.devices.index',
                 'url' => 'rfid-management/devices',
-                'sort_num' => '9',
+                'sort_num' => '10',
                 'is_divider' => false
             ],
             [
@@ -104,16 +113,61 @@ class Menu extends Seeder
                 'controller_name' => 'app\Http\Controllers\RfidManagement\LogScanController',
                 'route_name' => 'rfid-management.log-scan.index',
                 'url' => 'rfid-management/log-scan',
-                'sort_num' => '10',
+                'sort_num' => '11',
                 'is_divider' => false
             ],
             [
-                'icon' => 'IdCard',
-                'label_name' => 'Card List',
-                'controller_name' => 'app\Http\Controllers\RfidManagement\CardListController',
-                'route_name' => 'rfid-management.card.index',
-                'url' => 'rfid-management/card',
-                'sort_num' => '11',
+                'icon' => 'Archive',
+                'label_name' => 'Master Data',
+                'controller_name' => null,
+                'route_name' => 'master-data.index',
+                'url' => 'master-data',
+                'sort_num' => '12',
+                'is_divider' => true
+            ],
+            [
+                'icon' => 'CalendarClock',
+                'label_name' => 'Work Time',
+                'controller_name' => 'app\Http\Controllers\MasterData\WorkTimeController',
+                'route_name' => 'master-data.work-time.index',
+                'url' => 'master-data/work-time',
+                'sort_num' => '13',
+                'is_divider' => false
+            ],
+            [
+                'icon' => 'CalendarCheck',
+                'label_name' => 'Work Schedule',
+                'controller_name' => 'app\Http\Controllers\MasterData\WorkScheduleController',
+                'route_name' => 'master-data.work-schedule.index',
+                'url' => 'master-data/work-schedule',
+                'sort_num' => '14',
+                'is_divider' => false
+            ],
+            [
+                'icon' => 'NotebookPen',
+                'label_name' => 'Schedule Assignment',
+                'controller_name' => 'app\Http\Controllers\MasterData\ScheduleAssignmentController',
+                'route_name' => 'master-data.schedule-assignment.index',
+                'url' => 'master-data/schedule-assignment',
+                'sort_num' => '15',
+                'is_divider' => false
+            ],
+            [
+                'icon' => 'CalendarX',
+                'label_name' => 'Holidays',
+                'controller_name' => 'app\Http\Controllers\MasterData\HolidayController',
+                'route_name' => 'master-data.holiday.index',
+                'url' => 'master-data/holidays',
+                'sort_num' => '16',
+                'is_divider' => false
+            ],
+            [
+                'icon' => 'ClipboardPlus',
+                'label_name' => 'Leave Types',
+                'controller_name' => 'app\Http\Controllers\MasterData\LeaveTypeController',
+                'route_name' => 'master-data.leave-type.index',
+                'url' => 'master-data/leave-types',
+                'sort_num' => '17',
                 'is_divider' => false
             ],
         ];
