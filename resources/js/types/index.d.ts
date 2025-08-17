@@ -62,3 +62,27 @@ export interface User {
 }
 
 export type BreadcrumbItemType = BreadcrumbItem;
+
+export interface WorkTime {
+    id: number;
+    name: string;
+    start_time: string;
+    end_time: string;
+    late_tolerance_minutes: number;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface WorkScheduleDay {
+    id: number;
+    day_of_week: number;
+    work_time_id: number | null;
+    time?: WorkTime;
+}
+
+export interface WorkSchedule {
+    id: number;
+    name: string;
+    description: string | null;
+    days: WorkScheduleDay[];
+}

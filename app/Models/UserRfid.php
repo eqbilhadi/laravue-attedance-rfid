@@ -23,4 +23,9 @@ class UserRfid extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function scans()
+    {
+        return $this->hasMany(RfidScan::class, 'card_uid', 'uid');
+    }
 }
