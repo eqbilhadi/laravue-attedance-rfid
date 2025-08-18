@@ -43,24 +43,40 @@ const props = defineProps<{
   };
 }>();
 
-const search = ref(props.filters.search ?? "");
 const deleteDialog = ref<InstanceType<typeof DeleteConfirmDialog>>();
+const search = ref(props.filters.search ?? "");
 
-watchDebounced(
-  search,
-  (newSearch) => {
-    router.get(
-      route("master-data.work-schedule.index"),
-      { search: newSearch },
-      {
-        preserveState: true,
-        preserveScroll: true,
-        replace: true,
-      }
-    );
-  },
-  { debounce: 500 }
-);
+const onPageChange = (page: number) => {
+  router.get(
+    route("master-data.work-schedule.index"),
+    {
+      page,
+      search: search.value,
+    },
+    {
+      preserveState: true,
+      preserveScroll: true,
+      replace: true,
+    }
+  );
+};
+
+function clearFilters() {
+  search.value = "";
+}
+
+const applyFilters = () => {
+  const query: Record<string, any> = {};
+  if (search.value) query.search = search.value;
+
+  router.get(route("master-data.work-schedule.index"), query, {
+    preserveState: true,
+    preserveScroll: true,
+    replace: true,
+  });
+};
+
+watchDebounced(search, applyFilters, { debounce: 500 });
 
 function handleDelete(item: WorkSchedule) {
   deleteDialog.value?.show(item.name, () => {
@@ -103,21 +119,30 @@ const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
           </div>
         </CardHeader>
         <CardContent>
-          <div class="mb-4 relative w-full md:max-w-sm">
-            <Input
-              id="search"
-              type="text"
-              v-model="search"
-              placeholder="Search by schedule name"
-              class="pl-9"
-            />
-            <span
-              class="absolute start-1 inset-y-0 flex items-center justify-center px-2"
+          <div class="flex flex-wrap gap-3 md:gap-4 items-center mb-4">
+            <div class="relative w-full md:max-w-sm">
+              <Input
+                id="search"
+                type="text"
+                v-model="search"
+                placeholder="Search by schedule name"
+                class="pl-9 focus-visible:!ring-0"
+              />
+              <span
+                class="absolute start-1 inset-y-0 flex items-center justify-center px-2"
+              >
+                <Search class="size-4 text-muted-foreground" />
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              class="h-9 px-3 py-2 w-full sm:w-auto"
+              @click="clearFilters"
+              v-if="search"
             >
-              <Search class="size-4 text-muted-foreground" />
-            </span>
+              Clear Filter
+            </Button>
           </div>
-
           <div
             class="overflow-hidden rounded-lg border border-gray-200 mb-3 dark:border-zinc-800"
           >
@@ -233,7 +258,7 @@ const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
           </div>
         </CardContent>
         <CardFooter v-if="data.data.length > 0">
-          <PaginationWrapper :meta="data" />
+          <PaginationWrapper :meta="data" @change="onPageChange" />
         </CardFooter>
       </Card>
     </div>

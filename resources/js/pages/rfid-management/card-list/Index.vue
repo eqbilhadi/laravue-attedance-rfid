@@ -11,7 +11,6 @@ import PaginationWrapper from '@/components/Pagination.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import DeleteConfirmDialog from '@/components/ConfirmDeleteDialog.vue'
@@ -19,6 +18,7 @@ import ModalUpdateCard from './ModalUpdateCard.vue'
 
 // -- Icons --
 import { Trash2, Pencil, UserPlus } from 'lucide-vue-next'
+import BaseSelect from '@/components/BaseSelect.vue'
 
 // --- TypeScript Interfaces ---
 interface User {
@@ -74,18 +74,20 @@ function clearFilters() {
   is_active.value = ''
 }
 
-// Watch for changes in filters and refetch data from server
-watch([search, is_active], () => {
-  // Using watchDebounced for search might be better if you expect heavy typing
-  router.get(route('rfid-management.card.index'), {
-    search: search.value,
-    is_active: is_active.value,
-  }, {
+const applyFilters = () => {
+  const query: Record<string, any> = {};
+  if (search.value) query.search = search.value;
+  if (is_active.value) query.is_active = is_active.value;
+
+  router.get(route("rfid-management.card.index"), query, {
     preserveState: true,
     preserveScroll: true,
     replace: true,
-  })
-}, { deep: true })
+  });
+};
+
+// Watch for changes in filters and refetch data from server
+watch([search, is_active], applyFilters, { deep: true })
 
 function handleDelete(item: UserRfid) {
   deleteDialog.value?.show(item.uid, () => {
@@ -116,7 +118,7 @@ const goToRegisterCard = () => {
 
   <AppLayout :breadcrumbs="breadcrumbs">
     <div class="p-6 space-y-4">
-      <Card>
+      <Card class="gap-2">
         <CardHeader>
           <div class="flex items-start justify-between gap-4">
             <div class="flex flex-col gap-1">
@@ -133,39 +135,38 @@ const goToRegisterCard = () => {
         </CardHeader>
 
         <CardContent>
-          <div class="flex items-center gap-4 mb-6">
+          <div class="flex items-center gap-4 mb-4">
             <Input
               class="max-w-sm"
               placeholder="Search by user name..."
               v-model="search"
             />
-            <Select v-model="is_active">
-              <SelectTrigger class="w-[180px]">
-                <SelectValue placeholder="Select Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="true">
-                    Active
-                  </SelectItem>
-                  <SelectItem value="false">
-                    Inactive
-                  </SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
 
-            <Button
-              variant="outline"
-              @click="clearFilters"
-              v-if="search || is_active"
-            >
+            <BaseSelect
+              class="w-full md:w-48 focus-visible:!ring-0"
+              v-model="is_active"
+              :options="[
+                { label: 'Active', value: '1' },
+                { label: 'Inactive', value: '0' },
+              ]"
+              placeholder="Select Status"
+              clearable
+            />
+
+            <Button variant="outline" @click="clearFilters" v-if="search || is_active">
               Clear Filter
             </Button>
           </div>
 
-          <div v-if="props.data.data.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            <Card v-for="item in props.data.data" :key="item.id" class="flex flex-col py-5">
+          <div
+            v-if="props.data.data.length"
+            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+          >
+            <Card
+              v-for="item in props.data.data"
+              :key="item.id"
+              class="flex flex-col py-5"
+            >
               <CardHeader class="flex flex-row items-center gap-4">
                 <Avatar class="h-12 w-12">
                   <AvatarImage :src="item.user.avatar_url ?? ''" :alt="item.user.name" />
@@ -185,7 +186,7 @@ const goToRegisterCard = () => {
                 <div>
                   <p class="text-xs font-medium text-muted-foreground">Status</p>
                   <Badge :variant="item.user.is_active ? 'default' : 'destructive'">
-                    {{ item.user.is_active ? 'Active' : 'Inactive' }}
+                    {{ item.user.is_active ? "Active" : "Inactive" }}
                   </Badge>
                 </div>
                 <div>
@@ -194,19 +195,34 @@ const goToRegisterCard = () => {
                 </div>
               </CardContent>
               <CardFooter class="flex justify-end gap-2 mt-auto py-0">
-                <Button variant="outline" size="icon" class="h-8 w-8" @click="openUpdateModal(item)">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  class="h-8 w-8"
+                  @click="openUpdateModal(item)"
+                >
                   <Pencil class="w-4 h-4" />
                 </Button>
-                <Button variant="outline" size="icon" class="h-8 w-8 hover:bg-destructive hover:text-destructive-foreground" @click="handleDelete(item)">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  class="h-8 w-8 hover:bg-destructive hover:text-destructive-foreground"
+                  @click="handleDelete(item)"
+                >
                   <Trash2 class="w-4 h-4" />
                 </Button>
               </CardFooter>
             </Card>
           </div>
 
-          <div v-else class="flex flex-col items-center justify-center py-16 border-2 border-dashed rounded-lg">
+          <div
+            v-else
+            class="flex flex-col items-center justify-center py-16 border-2 border-dashed rounded-lg"
+          >
             <p class="text-muted-foreground">No user cards found.</p>
-            <p v-if="search || is_active" class="text-sm text-muted-foreground">Try clearing the filters.</p>
+            <p v-if="search || is_active" class="text-sm text-muted-foreground">
+              Try clearing the filters.
+            </p>
           </div>
         </CardContent>
 
@@ -216,9 +232,6 @@ const goToRegisterCard = () => {
       </Card>
     </div>
     <DeleteConfirmDialog ref="deleteDialog" />
-    <ModalUpdateCard 
-      v-model:show="showUpdateModal"
-      :user-rfid="editingUserRfid" 
-    />
+    <ModalUpdateCard v-model:show="showUpdateModal" :user-rfid="editingUserRfid" />
   </AppLayout>
 </template>
