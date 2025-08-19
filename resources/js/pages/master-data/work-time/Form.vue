@@ -39,16 +39,16 @@ function submit() {
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
-  { title: "Access Settings", href: "" },
-  { title: "Navigation Management", href: route("master-data.work-time.index") },
-  { title: isEditMode ? "Edit Navigation" : "Add Navigation", href: "#" },
+  { title: "Master Data", href: "" },
+  { title: "Work Time", href: route("master-data.work-time.index") },
+  { title: isEditMode ? "Edit Work Time" : "Add Work Time", href: "#" },
 ];
 </script>
 
 <template>
   <Head :title="isEditMode ? 'Edit Work Time' : 'Add Work Time'" />
 
-  <AppLayout>
+  <AppLayout :breadcrumbs="breadcrumbs">
     <div class="p-6 space-y-4">
       <Card class="gap-2">
         <CardHeader>

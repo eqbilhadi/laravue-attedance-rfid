@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from "@inertiajs/vue3";
 import AppLayout from "@/layouts/AppLayout.vue";
-import type { WorkSchedule, WorkTime } from "@/types";
+import type { WorkSchedule, WorkTime, BreadcrumbItem } from "@/types";
 import {
   Card,
   CardContent,
@@ -71,12 +71,18 @@ function submit() {
     form.post(route("master-data.work-schedule.store"));
   }
 }
+
+const breadcrumbs: BreadcrumbItem[] = [
+  { title: "Master Data", href: "" },
+  { title: "Work Schedules", href: route("master-data.work-schedule.index") },
+  { title: isEditMode ? "Edit Work Schedules" : "Add Work Schedules", href: "#" },
+];
 </script>
 
 <template>
   <Head :title="isEditMode ? 'Edit Work Schedule' : 'Add Work Schedule'" />
 
-  <AppLayout>
+  <AppLayout :breadcrumbs="breadcrumbs">
     <div class="p-6 space-y-4">
       <Card class="gap-2">
         <CardHeader>
