@@ -9,8 +9,9 @@ import Button from "@/components/ui/button/Button.vue";
 import Switch from "@/components/ui/switch/Switch.vue";
 import { BreadcrumbItem, SharedData } from "@/types";
 import { CircleArrowLeft, LoaderCircle } from "lucide-vue-next";
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import BaseSelect from "@/components/BaseSelect.vue";
+import DatePicker from "@/components/DatePicker.vue";
 import {
   Card,
   CardContent,
@@ -19,6 +20,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import Textarea from "@/components/ui/textarea/Textarea.vue";
+import { format } from "date-fns";
 
 interface UserFormData {
   name: string;
@@ -27,13 +29,13 @@ interface UserFormData {
   password?: string;
   is_active: boolean;
   birthplace: string;
-  birthdate: string;
+  birthdate: Date | null; // <-- UBAH INI
   gender: string;
   phone: string;
   address: string;
   avatar?: string;
   role: string | number;
-  [key: string]: string | boolean | null | undefined | number;
+  [key: string]: string | boolean | null | undefined | number | Date;
 }
 
 const props = defineProps<{
@@ -52,16 +54,19 @@ const form = useForm<UserFormData>({
   password: "", // Only for create
   is_active: props.user?.is_active ?? true,
   birthplace: props.user?.birthplace ?? "",
-  birthdate: props.user?.birthdate ?? "",
+  birthdate: props.user?.birthdate ? new Date(props.user.birthdate) : null,
   gender: props.user?.gender ?? "",
   phone: props.user?.phone ?? "",
   address: props.user?.address ?? "",
-  role: props.user?.role ?? ""
-});
+  role: props.user?.role ?? "",
+}).transform((data) => ({
+  ...data,
+  birthdate: data.birthdate ? format(data.birthdate, "yyyy-MM-dd") : null,
+}));
 
 const handleSubmit = () => {
   if (isEdit.value) {
-    form.put(route("rbac.user.update", { id: props.user?.id },));
+    form.put(route("rbac.user.update", { id: props.user?.id }));
   } else {
     form.post(route("rbac.user.store"));
   }
@@ -159,7 +164,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                   </div>
                   <div class="grid gap-2">
                     <Label for="birthdate">Birthdate</Label>
-                    <Input id="birthdate" v-model="form.birthdate" type="date" tabindex="8" />
+                    <DatePicker v-model="form.birthdate" placeholder="Select birthdate" />
                     <InputError :message="form.errors.birthdate" />
                   </div>
                   <div class="grid gap-2">
@@ -171,11 +176,11 @@ const breadcrumbs: BreadcrumbItem[] = [
                     <Label for="gender">Gender</Label>
                     <RadioGroup v-model="form.gender" class="flex items-center h-9 gap-4" id="gender" >
                       <div class="flex items-center space-x-2">
-                        <RadioGroupItem id="gender_l" value="l" tabindex="10"/>
+                        <RadioGroupItem id="gender_l" value="l" tabindex="10" />
                         <Label for="gender_l">Laki-laki</Label>
                       </div>
                       <div class="flex items-center space-x-2">
-                        <RadioGroupItem id="gender_p" value="p" tabindex="11"/>
+                        <RadioGroupItem id="gender_p" value="p" tabindex="11" />
                         <Label for="gender_p">Perempuan</Label>
                       </div>
                     </RadioGroup>

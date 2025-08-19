@@ -46,7 +46,7 @@ class UserManagementController extends Controller
         $roles = \App\Models\Role::get(['id', 'name'])
             ->map(fn($role) => [
                 'label' => $role->name,
-                'value' => $role->id,
+                'value' => $role->name
             ])->toArray();
 
         return Inertia::render('rbac/user/Form', [
@@ -67,7 +67,7 @@ class UserManagementController extends Controller
             "gender" => "required|in:l,p",
             "phone" => "required|numeric|digits_between:10,15",
             "address" => "required|max:255",
-            "role" => "required|exists:sys_roles,id",
+            "role" => "required|exists:sys_roles,name",
         ]);
 
         try {
@@ -86,12 +86,12 @@ class UserManagementController extends Controller
 
     public function edit(User $sysUser)
     {
-        $sysUser->role = $sysUser->roles->pluck('id')->first() ?? null;
+        $sysUser->role = $sysUser->roles->pluck('name')->first() ?? null;
 
         $roles = \App\Models\Role::get(['id', 'name'])
             ->map(fn($role) => [
                 'label' => $role->name,
-                'value' => $role->id,
+                'value' => $role->name
             ])->toArray();
 
         return Inertia::render('rbac/user/Form', [
@@ -113,7 +113,7 @@ class UserManagementController extends Controller
             "gender" => "required|in:l,p",
             "phone" => "required|numeric|digits_between:10,15",
             "address" => "required|max:255",
-            "role" => "required|exists:sys_roles,id",
+            "role" => "required|exists:sys_roles,name",
         ]);
 
         try {
@@ -161,7 +161,7 @@ class UserManagementController extends Controller
                 $q->whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($search) . '%'])
             )
             ->limit(10)
-            ->get(['id', 'name']);
+            ->get(['id', 'name', 'avatar', 'gender', 'email']);
 
 
         return response()->json($users);

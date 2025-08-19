@@ -11,6 +11,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
 class User extends Authenticatable
@@ -65,13 +66,6 @@ class User extends Authenticatable
         ];
     }
 
-    public function getAvatarUrlAttribute(): ?string
-    {
-        return $this->avatar 
-            ? route('stream.file', $this->avatar) 
-            : null;
-    }
-
     protected function avatarUrl(): Attribute
     {
         return Attribute::make(
@@ -98,5 +92,10 @@ class User extends Authenticatable
         return Attribute::make(
             get: fn() => Str::ucfirst($this->roles()->first()?->name)
         );
+    }
+
+     public function userSchedules(): HasMany
+    {
+        return $this->hasMany(UserSchedule::class, 'user_id');
     }
 }
