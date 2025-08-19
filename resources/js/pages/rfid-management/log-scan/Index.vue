@@ -55,6 +55,7 @@ import { type BreadcrumbItem } from '@/types'
 import Badge from '@/components/ui/badge/Badge.vue'
 import { cn } from '@/lib/utils'
 import BaseSelect from '@/components/BaseSelect.vue'
+import DateRangePicker from '@/components/DateRangePicker.vue'
 
 // --- Types ---
 interface Device {
@@ -93,62 +94,11 @@ const props = defineProps<{
 // --- State ---
 const device_uid = ref(props.filters?.device_uid ?? '')
 const search = ref(props.filters?.search ?? '')
-const dateRange = ref<DateRange>()
+const dateFilter = ref({
+  start: props.filters.start_date ? new Date(props.filters.start_date) : null,
+  end: props.filters.end_date ? new Date(props.filters.end_date) : null,
+})
 const isPopoverOpen = ref(false)
-
-// State internal untuk bulan yang ditampilkan di kalender (placeholder)
-const placeholder = ref<DateValue>(today(getLocalTimeZone()));
-
-// Bridge/proxy untuk v-model:placeholder ke komponen
-const placeholderProxy = computed<RekaDateValue | undefined>({
-  get: () => placeholder.value as unknown as RekaDateValue,
-  set: (v) => {
-    if (!v) return
-    // Buat CalendarDate baru supaya konsisten dengan state internal
-    placeholder.value = new CalendarDate(v.year, v.month, v.day)
-  },
-})
-
-// Inisialisasi dateRange dari props, ubah string menjadi CalendarDate
-if (props.filters.start_date && props.filters.end_date) {
-    const startDate = parseDate(props.filters.start_date)
-    dateRange.value = {
-        start: startDate,
-        end: parseDate(props.filters.end_date)
-    };
-    // Atur placeholder ke tanggal awal filter
-    placeholder.value = startDate;
-}
-
-// --- Computed properties untuk dropdown bulan dan tahun ---
-const availableMonths = computed(() => Array.from({ length: 12 }, (_, i) => ({
-    value: (i + 1).toString(),
-    label: format(setMonth(new Date(), i), 'MMMM')
-})))
-
-const availableYears = computed(() => {
-    const currentYear = getYear(placeholder.value.toDate(getLocalTimeZone()));
-    const years = [];
-    for (let i = currentYear - 5; i <= currentYear + 5; i++) {
-        years.push({ value: i.toString(), label: i.toString() });
-    }
-    return years;
-})
-
-
-// --- Computed property untuk menampilkan tanggal di tombol ---
-const dateRangeDisplay = computed(() => {
-  if (dateRange.value?.start && dateRange.value?.end) {
-    const start = dateRange.value.start.toDate(getLocalTimeZone());
-    const end = dateRange.value.end.toDate(getLocalTimeZone());
-    return `${format(start, 'dd LLL, y')} - ${format(end, 'dd LLL, y')}`;
-  }
-  if (dateRange.value?.start) {
-    const start = dateRange.value.start.toDate(getLocalTimeZone());
-    return format(start, 'dd LLL, y');
-  }
-  return 'Pick a date range';
-});
 
 // --- Fungsi untuk memicu request ke server ---
 const applyFilters = () => {
@@ -162,11 +112,9 @@ const applyFilters = () => {
         query.search = search.value;
     }
 
-    if (dateRange.value?.start && dateRange.value?.end) {
-        const start = dateRange.value.start.toDate(getLocalTimeZone());
-        const end = dateRange.value.end.toDate(getLocalTimeZone());
-        query.start_date = format(start, 'yyyy-MM-dd');
-        query.end_date = format(end, 'yyyy-MM-dd');
+    if (dateFilter.value?.start && dateFilter.value?.end) {
+        query.start_date = format(dateFilter.value.start, 'yyyy-MM-dd');
+        query.end_date = format(dateFilter.value.end, 'yyyy-MM-dd');
     }
 
     router.get(route('rfid-management.log-scan.index'), query, {
@@ -183,11 +131,9 @@ function onPageChange(page: number) {
     if (device_uid.value) {
         query.device_uid = device_uid.value;
     }
-    if (dateRange.value?.start && dateRange.value?.end) {
-        const start = dateRange.value.start.toDate(getLocalTimeZone());
-        const end = dateRange.value.end.toDate(getLocalTimeZone());
-        query.start_date = format(start, 'yyyy-MM-dd');
-        query.end_date = format(end, 'yyyy-MM-dd');
+    if (dateFilter.value?.start && dateFilter.value?.end) {
+        query.start_date = format(dateFilter.value.start, 'yyyy-MM-dd');
+        query.end_date = format(dateFilter.value.end, 'yyyy-MM-dd');
     }
 
     router.get(route('rfid-management.log-scan.index'), query, {
@@ -201,26 +147,16 @@ function onPageChange(page: number) {
 function clearFilters() {
   device_uid.value = ''
   search.value = ''
-  dateRange.value = undefined
+  dateFilter.value.start = null
+  dateFilter.value.end = null
   applyFilters();
 }
 
 // --- Watchers ---
-watchDebounced([device_uid, search], applyFilters, {
+watchDebounced([device_uid, search, dateFilter], applyFilters, {
   debounce: 500,
   maxWait: 1000,
 })
-
-watch(dateRange, (newValue) => {
-    if (newValue?.start && newValue?.end) {
-        applyFilters();
-        isPopoverOpen.value = false;
-    }
-    // Jika user memilih tanggal awal, pindahkan view kalender ke sana
-    if (newValue?.start) {
-        placeholder.value = new CalendarDate(newValue.start.year, newValue.start.month, newValue.start.day);
-    }
-});
 
 // --- Date and Time Formatting Functions ---
 const formatDate = (dateString: string) => {
@@ -291,89 +227,14 @@ const breadcrumbs: BreadcrumbItem[] = [
             />
 
             <!-- Date Range Picker with Shadcn Component -->
-            <Popover v-model:open="isPopoverOpen">
-              <PopoverTrigger as-child>
-                <Button
-                  variant="outline"
-                  :class="
-                    cn(
-                      'lg:w-[280px] w-full justify-start text-left font-normal',
-                      !dateRange && 'text-muted-foreground'
-                    )
-                  "
-                >
-                  <CalendarIcon class="w-4 h-4 mr-2" />
-                  <span>{{ dateRangeDisplay }}</span>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent class="w-auto p-3">
-                <div class="flex items-center justify-center gap-2 mb-4">
-                  <!-- Month Select -->
-                  <Select
-                    :model-value="placeholder.month.toString()"
-                    @update:model-value="
-                      (v) => {
-                        placeholder = new CalendarDate(
-                          placeholder.year,
-                          Number(v),
-                          placeholder.day
-                        );
-                      }
-                    "
-                  >
-                    <SelectTrigger aria-label="Select month" class="w-[60%]">
-                      <SelectValue placeholder="Select month" />
-                    </SelectTrigger>
-                    <SelectContent class="max-h-[300px]">
-                      <SelectItem
-                        v-for="month in availableMonths"
-                        :key="month.value"
-                        :value="month.value"
-                      >
-                        {{ month.label }}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <!-- Year Select -->
-                  <Select
-                    :model-value="placeholder.year.toString()"
-                    @update:model-value="
-                      (v) => {
-                        placeholder = new CalendarDate(
-                          Number(v),
-                          placeholder.month,
-                          placeholder.day
-                        );
-                      }
-                    "
-                  >
-                    <SelectTrigger aria-label="Select year" class="w-[40%]">
-                      <SelectValue placeholder="Select year" />
-                    </SelectTrigger>
-                    <SelectContent class="max-h-[300px]">
-                      <SelectItem
-                        v-for="year in availableYears"
-                        :key="year.value"
-                        :value="year.value"
-                      >
-                        {{ year.label }}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <RangeCalendar
-                  v-model="dateRange"
-                  v-model:placeholder="placeholderProxy"
-                />
-              </PopoverContent>
-            </Popover>
+            <DateRangePicker v-model="dateFilter" clearable class="lg:w-[280px]" />
 
             <!-- Clear Filter Button -->
             <Button
               variant="outline"
               class="h-9 px-3 py-2"
               @click="clearFilters"
-              v-if="device_uid || dateRange || search"
+              v-if="device_uid || dateFilter || search"
             >
               Clear Filters
             </Button>
