@@ -7,6 +7,9 @@ use App\Http\Controllers\AccessSettings\NavManagementController;
 use App\Http\Controllers\AccessSettings\RoleManagementController;
 use App\Http\Controllers\AccessSettings\UserManagementController;
 use App\Http\Controllers\AccessSettings\PermissionManagementController;
+use App\Http\Controllers\MasterData\HolidayController;
+use App\Http\Controllers\MasterData\LeaveTypeController;
+use App\Http\Controllers\MasterData\ScheduleAssignmentController;
 use App\Http\Controllers\MasterData\WorkScheduleController;
 use App\Http\Controllers\MasterData\WorkTimeController;
 use App\Http\Controllers\RfidManagement\CardListController;
@@ -107,12 +110,30 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->parameters(['work-time' => 'workTime'])
             ->whereNumber('workTime')
             ->names('work-time');
-        
-            Route::resource('work-schedule', WorkScheduleController::class)
+        // Work Schedule
+        Route::resource('work-schedule', WorkScheduleController::class)
             ->except('show')
             ->parameters(['work-schedule' => 'workSchedule'])
             ->whereNumber('workSchedule')
             ->names('work-schedule');
+        // Schedule Assignment
+        Route::resource('schedule-assignment', ScheduleAssignmentController::class)
+            ->except('show')
+            ->parameters(['schedule-assignment' => 'scheduleAssignment'])
+            ->whereNumber('scheduleAssignment')
+            ->names('schedule-assignment');
+        // Holidays
+        Route::resource('holiday', HolidayController::class)
+            ->only('index', 'store', 'update', 'destroy')
+            ->parameters(['holiday' => 'holiday'])
+            ->whereNumber('holiday')
+            ->names('holiday');
+        // Leave Type
+        Route::resource('leave-type', LeaveTypeController::class)
+            ->only('index', 'store', 'update', 'destroy')
+            ->parameters(['leave-type' => 'leaveType'])
+            ->whereNumber('leave-type')
+            ->names('leave-type');
     });
 
 

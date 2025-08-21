@@ -86,3 +86,23 @@ export interface WorkSchedule {
     description: string | null;
     days: WorkScheduleDay[];
 }
+
+export interface UserSchedule {
+    id: number;
+    start_date: string;
+    end_date: string | null;
+    user: User;
+    work_schedule: WorkSchedule;
+}
+
+export interface Holiday {
+    id: number;
+    description: string;
+    date: Date;
+}
+
+export interface LeaveType {
+    id: number;
+    name: string;
+    is_deducting_leave: boolean;
+}
