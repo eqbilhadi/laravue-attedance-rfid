@@ -106,3 +106,14 @@ export interface LeaveType {
     name: string;
     is_deducting_leave: boolean;
 }
+
+export interface Attendance {
+    id: number;
+    date: string;
+    clock_in: string | null;
+    clock_out: string | null;
+    late_minutes: number
+    status: string;
+    user: User;
+    work_schedule: WorkSchedule;
+}

@@ -157,7 +157,7 @@ class Menu extends Seeder
                 'label_name' => 'Holidays',
                 'controller_name' => 'app\Http\Controllers\MasterData\HolidayController',
                 'route_name' => 'master-data.holiday.index',
-                'url' => 'master-data/holidays',
+                'url' => 'master-data/holiday',
                 'sort_num' => '16',
                 'is_divider' => false
             ],
@@ -166,8 +166,62 @@ class Menu extends Seeder
                 'label_name' => 'Leave Types',
                 'controller_name' => 'app\Http\Controllers\MasterData\LeaveTypeController',
                 'route_name' => 'master-data.leave-type.index',
-                'url' => 'master-data/leave-types',
+                'url' => 'master-data/leave-type',
                 'sort_num' => '17',
+                'is_divider' => false
+            ],
+            [
+                'icon' => 'ClipboardCheck',
+                'label_name' => 'Attendance Management',
+                'controller_name' => null,
+                'route_name' => 'attendance.index',
+                'url' => 'attendance',
+                'sort_num' => '18',
+                'is_divider' => true
+            ],
+            [
+                'icon' => 'BookOpenCheck',
+                'label_name' => 'Attendance Data',
+                'controller_name' => 'app\Http\Controllers\Attendance\AttendanceController',
+                'route_name' => 'attendance.data.index',
+                'url' => 'attendance/data',
+                'sort_num' => '19',
+                'is_divider' => false
+            ],
+            [
+                'icon' => 'FilePenLine',
+                'label_name' => 'Attendance Correction',
+                'controller_name' => 'app\Http\Controllers\Attendance\AttendanceCorrectionController',
+                'route_name' => 'attendance.correction.index',
+                'url' => 'attendance/correction',
+                'sort_num' => '20',
+                'is_divider' => false
+            ],
+            [
+                'icon' => 'Plane',
+                'label_name' => 'Leave Management',
+                'controller_name' => null,
+                'route_name' => 'leave.index',
+                'url' => 'leave',
+                'sort_num' => '21',
+                'is_divider' => true
+            ],
+            [
+                'icon' => 'ClipboardSignature',
+                'label_name' => 'Leave Request',
+                'controller_name' => 'app\Http\Controllers\Leave\LeaveRequestController',
+                'route_name' => 'leave.request.index',
+                'url' => 'leave/request',
+                'sort_num' => '22',
+                'is_divider' => false
+            ],
+            [
+                'icon' => 'Stamp',
+                'label_name' => 'Leave Approval',
+                'controller_name' => 'app\Http\Controllers\Leave\LeaveApprovalController',
+                'route_name' => 'leave.approval.index',
+                'url' => 'leave/approval',
+                'sort_num' => '23',
                 'is_divider' => false
             ],
         ];

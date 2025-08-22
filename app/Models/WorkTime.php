@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -29,15 +30,25 @@ class WorkTime extends Model
     ];
 
     /**
-     * The attributes that should be cast.
-     *
-     * @var array
+     * Get the start_time attribute without seconds.
      */
-    protected $casts = [
-        'start_time' => 'datetime:H:i',
-        'end_time' => 'datetime:H:i',
-    ];
-    
+    protected function startTime(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $value) => $value ? substr($value, 0, 5) : null,
+        );
+    }
+
+    /**
+     * Get the end_time attribute without seconds.
+     */
+    protected function endTime(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $value) => $value ? substr($value, 0, 5) : null,
+        );
+    }
+
     /**
      * Get the pattern days associated with the work time.
      */

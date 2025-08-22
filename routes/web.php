@@ -7,6 +7,8 @@ use App\Http\Controllers\AccessSettings\NavManagementController;
 use App\Http\Controllers\AccessSettings\RoleManagementController;
 use App\Http\Controllers\AccessSettings\UserManagementController;
 use App\Http\Controllers\AccessSettings\PermissionManagementController;
+use App\Http\Controllers\Attendance\AttendanceController;
+use App\Http\Controllers\Attendance\AttendanceCorrectionController;
 use App\Http\Controllers\MasterData\HolidayController;
 use App\Http\Controllers\MasterData\LeaveTypeController;
 use App\Http\Controllers\MasterData\ScheduleAssignmentController;
@@ -136,6 +138,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->names('leave-type');
     });
 
+    Route::prefix('attendance')->name('attendance.')->group(function () {
+        Route::get('data', [AttendanceController::class, 'index'])->name('data.index');
+        Route::post('process', [AttendanceController::class, 'processAttendance'])->name('data.process');
+        Route::get('correction/fetch', [AttendanceCorrectionController::class, 'fetch'])->name('correction.fetch');
+        Route::resource('correction', AttendanceCorrectionController::class)
+            ->except('show')
+            ->parameters(['correction' => 'correction'])
+            ->whereNumber('correction')
+            ->names('correction');
+    });
 
     // Rute untuk streaming file dari storage
     Route::get('/stream/{path}', function ($path) {

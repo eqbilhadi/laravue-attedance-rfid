@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
 class User extends Authenticatable
@@ -94,8 +95,13 @@ class User extends Authenticatable
         );
     }
 
-     public function userSchedules(): HasMany
+    public function userSchedules(): HasMany
     {
         return $this->hasMany(UserSchedule::class, 'user_id');
+    }
+
+    public function rfidCard(): HasOne
+    {
+        return $this->hasOne(UserRfid::class, 'user_id');
     }
 }
