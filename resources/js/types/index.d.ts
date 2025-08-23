@@ -5,6 +5,7 @@ import * as icons from 'lucide-vue-next'
 
 export interface Auth {
     user: User;
+    can: Record<string, boolean>;
 }
 
 export interface BreadcrumbItem {
@@ -116,4 +117,18 @@ export interface Attendance {
     status: string;
     user: User;
     work_schedule: WorkSchedule;
+}
+
+export interface LeaveRequest {
+  id: number;
+  user: User;
+  user_id: string;
+  leave_type: LeaveType;
+  leave_type_id: number;
+  start_date: string;
+  end_date: string;
+  reason: string;
+  status: string;
+  approver: User | null;
+  rejection_reason: string;
 }

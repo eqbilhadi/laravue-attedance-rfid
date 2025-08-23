@@ -9,6 +9,8 @@ use App\Http\Controllers\AccessSettings\UserManagementController;
 use App\Http\Controllers\AccessSettings\PermissionManagementController;
 use App\Http\Controllers\Attendance\AttendanceController;
 use App\Http\Controllers\Attendance\AttendanceCorrectionController;
+use App\Http\Controllers\Leave\LeaveApprovalController;
+use App\Http\Controllers\Leave\LeaveRequestController;
 use App\Http\Controllers\MasterData\HolidayController;
 use App\Http\Controllers\MasterData\LeaveTypeController;
 use App\Http\Controllers\MasterData\ScheduleAssignmentController;
@@ -147,6 +149,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->parameters(['correction' => 'correction'])
             ->whereNumber('correction')
             ->names('correction');
+    });
+
+    Route::prefix('leave')->name('leave.')->group(function () {
+        Route::resource('request', LeaveRequestController::class)
+            ->except(['show'])
+            ->parameters(['request' => 'leaveRequest'])
+            ->whereNumber('leaveRequest')
+            ->names('request');
+        Route::get('approval', [LeaveApprovalController::class, 'index'])->name('approval.index');
+        Route::put('approval/{leaveRequest}', [LeaveApprovalController::class, 'update'])->name('approval.update');
     });
 
     // Rute untuk streaming file dari storage

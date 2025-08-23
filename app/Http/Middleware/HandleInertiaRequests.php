@@ -2,10 +2,12 @@
 
 namespace App\Http\Middleware;
 
-use Illuminate\Foundation\Inspiring;
-use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Tighten\Ziggy\Ziggy;
+use Illuminate\Http\Request;
+use Illuminate\Foundation\Inspiring;
+use Illuminate\Support\Facades\Auth;
+use Spatie\Permission\Models\Permission;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -45,6 +47,11 @@ class HandleInertiaRequests extends Middleware
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
                 'user' => $request->user(),
+                'can' => $request->user()?->getPermissionsViaRoles()
+                    ->map(function(Permission $permission) {
+                        return [$permission['name'] => Auth::user()->can($permission['name'])];
+                    })
+                    ->collapse()->all()
             ],
             'ziggy' => [
                 ...(new Ziggy)->toArray(),

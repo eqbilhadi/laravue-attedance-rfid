@@ -20,5 +20,12 @@ class Permission extends Seeder
         $createPermission = ModelsPermission::firstOrCreate(['name' => 'create permission', 'group' => 'Permission']);
         $editPermission = ModelsPermission::firstOrCreate(['name' => 'edit permission', 'group' => 'Permission']);
         $deletePermission = ModelsPermission::firstOrCreate(['name' => 'delete permission', 'group' => 'Permission']);
+        
+        $allLeaveRequest = ModelsPermission::firstOrCreate(['name' => 'all leave request', 'group' => 'Leave Request']);
+        $createForOthersLeaveRequest = ModelsPermission::firstOrCreate(['name' => 'create for others leave request', 'group' => 'Leave Request']);
+        $deleteLeaveRequest = ModelsPermission::firstOrCreate(['name' => 'delete leave request', 'group' => 'Leave Request']);
+        $createLeaveRequest = ModelsPermission::firstOrCreate(['name' => 'create leave request', 'group' => 'Leave Request']);
+        $editLeaveRequest = ModelsPermission::firstOrCreate(['name' => 'edit leave request', 'group' => 'Leave Request']);
+        $approveLeaveRequest = ModelsPermission::firstOrCreate(['name' => 'approve leave request', 'group' => 'Leave Request']);
     }
 }
