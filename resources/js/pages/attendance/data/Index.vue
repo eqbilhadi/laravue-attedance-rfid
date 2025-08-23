@@ -90,12 +90,12 @@ function runProcess() {
   );
 }
 
-const applyFilters = () => {
+function getFilteredData(page?: number) {
   const query: Record<string, any> = {};
+  if (page) query.page = page;
   if (search.value) query.search = search.value;
   if (status.value) query.status = status.value;
-  if (dateRange.value.start)
-    query.start_date = format(dateRange.value.start, "yyyy-MM-dd");
+  if (dateRange.value.start) query.start_date = format(dateRange.value.start, "yyyy-MM-dd");
   if (dateRange.value.end) query.end_date = format(dateRange.value.end, "yyyy-MM-dd");
 
   router.get(route("attendance.data.index"), query, {
@@ -103,7 +103,10 @@ const applyFilters = () => {
     preserveScroll: true,
     replace: true,
   });
-};
+}
+
+const applyFilters = () => getFilteredData();
+const onPageChange = (page: number) => getFilteredData(page);
 
 function clearFilters() {
   search.value = "";
@@ -136,9 +139,9 @@ const statusVariant = (status: string) => {
     case "Absent":
       return "secondary";
     case "Leave":
-      return "default"; // Anda bisa menambahkan varian ini di komponen Badge
+      return "default";
     case "Sick":
-      return "default"; // Anda bisa menambahkan varian ini
+      return "default";
     case "Permit":
       return "default";
     case "Holiday":
@@ -310,7 +313,7 @@ const breadcrumbs: BreadcrumbItem[] = [
           </div>
         </CardContent>
         <CardFooter v-if="data.data.length > 0">
-          <PaginationWrapper :meta="data" />
+          <PaginationWrapper :meta="data" @change="onPageChange" />
         </CardFooter>
       </Card>
     </div>

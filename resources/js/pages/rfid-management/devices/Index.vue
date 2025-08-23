@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { type BreadcrumbItem } from '@/types'
-import { router, Head, Link } from '@inertiajs/vue3'
+import { router, Head } from '@inertiajs/vue3'
 import type { Pagination } from '@/types/pagination'
 import { watchDebounced } from '@vueuse/core'
+import { Device } from '@/types'
 
 import BaseSelect from '@/components/BaseSelect.vue'
 import PaginationWrapper from '@/components/Pagination.vue'
@@ -41,17 +42,6 @@ import {
   Radio
 } from 'lucide-vue-next'
 
-// --- Types ---
-interface Device {
-  id: number
-  device_uid: string
-  device_name: string
-  location: string
-  ip_address: string
-  is_active: boolean
-  last_seen_at: string
-}
-
 const props = defineProps<{
   data: Pagination<Device>
   filters: {
@@ -59,41 +49,32 @@ const props = defineProps<{
   }
 }>()
 
-// --- State ---
 const is_active = ref(props.filters?.is_active ?? '')
 const showScanModal = ref(false)
 const deleteDialog = ref<InstanceType<typeof DeleteConfirmDialog>>()
 const showEditModal = ref(false)
-const editingDevice = ref<Device | null>(null) 
+const editingDevice = ref<Device | null>(null)
 
-// --- Pagination Handler ---
-function onPageChange(page: number) {
-  router.get(route('rfid-management.devices.index'), {
-    page,
-    is_active: is_active.value,
-  }, {
+function getFilteredData(page?: number) {
+  const query: Record<string, any> = {};
+  if (page) query.page = page;
+  if (is_active.value) query.is_active = is_active.value
+
+  router.get(route("rfid-management.devices.index"), query, {
     preserveState: true,
     preserveScroll: true,
     replace: true,
   })
 }
 
-// --- Clear filter ---
+const applyFilters = () => getFilteredData();
+const onPageChange = (page: number) => getFilteredData(page);
+
 function clearFilters() {
   is_active.value = ''
 }
 
-// --- Watch is_active with debounce ---
-watchDebounced(is_active, (newIsActive) => {
-  const query: Record<string, string> = {}
-  if (newIsActive) query.is_active = newIsActive
-
-  router.get(route('rfid-management.devices.index'), query, {
-    preserveState: true,
-    preserveScroll: true,
-    replace: true,
-  })
-}, {
+watchDebounced(is_active, applyFilters, {
   debounce: 500,
   maxWait: 1000,
 })
@@ -106,7 +87,6 @@ onBeforeUnmount(() => {
   disconnectMqtt()
 })
 
-// --- Delete device handler ---
 function handleDelete(item: Device) {
   deleteDialog.value?.show(item.device_name, () => {
     router.delete(route('rfid-management.devices.destroy', { id: item.id }), {
@@ -115,7 +95,6 @@ function handleDelete(item: Device) {
   })
 }
 
-// --- Modal scan ---
 function openScanModal() {
   disconnectMqtt()
   showScanModal.value = true
@@ -131,17 +110,13 @@ const sendPing = (device_uid: string) => {
 }
 
 watch(showScanModal, (isOpen: boolean) => {
-  
   if (!isOpen) {
-    if (!isOpen) {
     setTimeout(() => {
       connectMqtt()
-    }, 500) // delay 500 ms
-  }
+    }, 500)
   }
 })
 
-// --- Breadcrumbs ---
 const breadcrumbs: BreadcrumbItem[] = [
   { title: 'RFID Management', href: '' },
   { title: 'Devices', href: route('rfid-management.devices.index') },
@@ -159,11 +134,15 @@ const breadcrumbs: BreadcrumbItem[] = [
             <div class="flex flex-col gap-1">
               <CardTitle>Devices</CardTitle>
               <CardDescription>
-                Keep track of all active and inactive devices. Ensure your devices are online and ready to scan cards for seamless access control.
+                Keep track of all active and inactive devices. Ensure your devices are
+                online and ready to scan cards for seamless access control.
               </CardDescription>
             </div>
             <div class="grid gap-3">
-              <Button @click="openScanModal" class="cursor-pointer flex items-center gap-1">
+              <Button
+                @click="openScanModal"
+                class="cursor-pointer flex items-center gap-1"
+              >
                 <ScanSearch class="text-primary-foreground" />
                 <span class="hidden lg:inline">Scan New Device</span>
               </Button>
@@ -195,17 +174,23 @@ const breadcrumbs: BreadcrumbItem[] = [
         </CardHeader>
 
         <CardContent class="space-y-4">
-          <div class="overflow-hidden rounded-lg border border-gray-200 mb-3 dark:border-zinc-800">
+          <div
+            class="overflow-hidden rounded-lg border border-gray-200 mb-3 dark:border-zinc-800"
+          >
             <Table>
               <TableHeader class="bg-gray-100 text-left text-gray-700 dark:bg-zinc-800">
                 <TableRow>
-                  <TableHead class="ps-3 text-center w-1 dark:text-foreground">No</TableHead>
+                  <TableHead class="ps-3 text-center w-1 dark:text-foreground"
+                    >No</TableHead
+                  >
                   <TableHead class="dark:text-foreground">Device name</TableHead>
                   <TableHead class="dark:text-foreground">Device uid</TableHead>
                   <TableHead class="dark:text-foreground">Location</TableHead>
                   <TableHead class="dark:text-foreground">IP Address</TableHead>
                   <TableHead class="dark:text-foreground text-center">Status</TableHead>
-                  <TableHead class="text-right pe-3 dark:text-foreground">Action</TableHead>
+                  <TableHead class="text-right pe-3 dark:text-foreground"
+                    >Action</TableHead
+                  >
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -220,12 +205,8 @@ const breadcrumbs: BreadcrumbItem[] = [
                     <TableCell>{{ device.ip_address }}</TableCell>
                     <TableCell class="text-center">
                       <Badge :variant="device.is_active ? 'default' : 'outline'">
-                        <template v-if="device.is_active">
-                          Active
-                        </template>
-                        <template v-else>
-                          Inactive
-                        </template>
+                        <template v-if="device.is_active"> Active </template>
+                        <template v-else> Inactive </template>
                       </Badge>
                     </TableCell>
                     <TableCell class="text-right pe-3">

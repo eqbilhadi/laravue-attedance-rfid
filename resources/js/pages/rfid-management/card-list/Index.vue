@@ -16,11 +16,9 @@ import { Badge } from '@/components/ui/badge'
 import DeleteConfirmDialog from '@/components/ConfirmDeleteDialog.vue'
 import ModalUpdateCard from './ModalUpdateCard.vue'
 
-// -- Icons --
 import { Trash2, Pencil, UserPlus } from 'lucide-vue-next'
 import BaseSelect from '@/components/BaseSelect.vue'
 
-// --- TypeScript Interfaces ---
 interface User {
   id: string
   name: string
@@ -44,49 +42,38 @@ const props = defineProps<{
   }
 }>()
 
-// --- State ---
 const search = ref(props.filters?.search ?? '')
 const is_active = ref(props.filters?.is_active ?? '')
 const deleteDialog = ref<InstanceType<typeof DeleteConfirmDialog>>()
 const showUpdateModal = ref(false)
 const editingUserRfid = ref<UserRfid | null>(null)
 
-function openUpdateModal(item: UserRfid) {
-  editingUserRfid.value = item
-  showUpdateModal.value = true
-}
+function getFilteredData(page?: number) {
+  const query: Record<string, any> = {};
+  if (page) query.page = page;
+  if (search.value) query.search = search.value
+  if (is_active.value) query.is_active = is_active.value
 
-// --- Filter & Pagination Logic ---
-function onPageChange(page: number) {
-  router.get(route('rfid-management.card.index'), {
-    page,
-    search: search.value,
-    is_active: is_active.value,
-  }, {
+  router.get(route("rfid-management.card.index"), query, {
     preserveState: true,
     preserveScroll: true,
     replace: true,
   })
 }
 
+function openUpdateModal(item: UserRfid) {
+  editingUserRfid.value = item
+  showUpdateModal.value = true
+}
+
+const applyFilters = () => getFilteredData();
+const onPageChange = (page: number) => getFilteredData(page);
+
 function clearFilters() {
   search.value = ''
   is_active.value = ''
 }
 
-const applyFilters = () => {
-  const query: Record<string, any> = {};
-  if (search.value) query.search = search.value;
-  if (is_active.value) query.is_active = is_active.value;
-
-  router.get(route("rfid-management.card.index"), query, {
-    preserveState: true,
-    preserveScroll: true,
-    replace: true,
-  });
-};
-
-// Watch for changes in filters and refetch data from server
 watch([search, is_active], applyFilters, { deep: true })
 
 function handleDelete(item: UserRfid) {
@@ -97,13 +84,11 @@ function handleDelete(item: UserRfid) {
   })
 }
 
-// --- Breadcrumbs ---
 const breadcrumbs: BreadcrumbItem[] = [
   { title: 'RFID Management', href: '' },
   { title: 'User Cards', href: route('rfid-management.card.index') },
 ]
 
-// --- Helper function for Avatar Fallback ---
 const getInitials = (name: string) => {
   return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
 }

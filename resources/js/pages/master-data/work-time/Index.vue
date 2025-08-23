@@ -39,35 +39,24 @@ const props = defineProps<{
 const deleteDialog = ref<InstanceType<typeof DeleteConfirmDialog>>();
 const search = ref(props.filters.search ?? "");
 
-const onPageChange = (page: number) => {
-  router.get(
-    route("master-data.work-time.index"),
-    {
-      page,
-      search: search.value,
-    },
-    {
-      preserveState: true,
-      preserveScroll: true,
-      replace: true,
-    }
-  );
-};
-
-function clearFilters() {
-  search.value = "";
-}
-
-const applyFilters = () => {
+function getFilteredData(page?: number) {
   const query: Record<string, any> = {};
-  if (search.value) query.search = search.value;
+  if (page) query.page = page;
+  if (search.value) query.search = search.value
 
   router.get(route("master-data.work-time.index"), query, {
     preserveState: true,
     preserveScroll: true,
     replace: true,
-  });
-};
+  })
+}
+
+const applyFilters = () => getFilteredData();
+const onPageChange = (page: number) => getFilteredData(page);
+
+function clearFilters() {
+  search.value = "";
+}
 
 watchDebounced(search, applyFilters, { debounce: 500 });
 

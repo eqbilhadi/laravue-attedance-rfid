@@ -52,8 +52,9 @@ const search = ref(props.filters.search ?? "");
 const workScheduleId = ref(props.filters.work_schedule_id ?? "");
 const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-const applyFilters = () => {
+function getFilteredData(page?: number) {
   const query: Record<string, any> = {};
+  if (page) query.page = page;
   if (search.value) query.search = search.value;
   if (workScheduleId.value) query.work_schedule_id = workScheduleId.value;
 
@@ -62,7 +63,10 @@ const applyFilters = () => {
     preserveScroll: true,
     replace: true,
   });
-};
+}
+
+const applyFilters = () => getFilteredData();
+const onPageChange = (page: number) => getFilteredData(page);
 
 function clearFilters() {
   search.value = "";
@@ -70,22 +74,6 @@ function clearFilters() {
 }
 
 watchDebounced([search, workScheduleId], applyFilters, { debounce: 500 });
-
-const onPageChange = (page: number) => {
-  router.get(
-    route("master-data.schedule-assignment.index"),
-    {
-      page,
-      search: search.value,
-      work_schedule_id: workScheduleId.value,
-    },
-    {
-      preserveState: true,
-      preserveScroll: true,
-      replace: true,
-    }
-  );
-};
 
 function handleDelete(item: UserSchedule) {
   deleteDialog.value?.show(`assignment for ${item.user.name}`, () => {

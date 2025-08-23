@@ -64,6 +64,24 @@ export interface User {
 
 export type BreadcrumbItemType = BreadcrumbItem;
 
+export interface Device {
+  id: number
+  device_uid: string
+  device_name: string
+  location: string
+  ip_address: string
+  is_active: boolean
+  last_seen_at: string
+}
+export interface RfidScan {
+  id: number
+  device_uid: string
+  card_uid: string
+  created_at: string
+  device: Device
+  user: User
+}
+
 export interface WorkTime {
     id: number;
     name: string;

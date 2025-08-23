@@ -27,7 +27,7 @@ import Input from "@/components/ui/input/Input.vue";
 import Button from "@/components/ui/button/Button.vue";
 import PaginationWrapper from "@/components/Pagination.vue";
 import DeleteConfirmDialog from "@/components/ConfirmDeleteDialog.vue";
-import FormDialog from "./FormDialog.vue"; // <-- Import komponen form
+import FormDialog from "./FormDialog.vue";
 import Badge from "@/components/ui/badge/Badge.vue";
 import { Trash2, Pencil, CirclePlus, Search } from "lucide-vue-next";
 
@@ -38,12 +38,10 @@ const props = defineProps<{
   };
 }>();
 
-// --- State ---
 const deleteDialog = ref<InstanceType<typeof DeleteConfirmDialog>>();
 const formDialog = ref<InstanceType<typeof FormDialog>>();
 const search = ref(props.filters.search ?? "");
 
-// --- Fungsi ---
 function openAddDialog() {
   formDialog.value?.show();
 }
@@ -52,17 +50,20 @@ function openEditDialog(leaveType: LeaveType) {
   formDialog.value?.show(leaveType);
 }
 
-const applyFilters = () => {
-  router.get(
-    route("master-data.leave-type.index"),
-    { search: search.value },
-    {
-      preserveState: true,
-      preserveScroll: true,
-      replace: true,
-    }
-  );
-};
+function getFilteredData(page?: number) {
+  const query: Record<string, any> = {};
+  if (page) query.page = page;
+  if (search.value) query.search = search.value
+
+  router.get(route("master-data.leave-type.index"), query, {
+    preserveState: true,
+    preserveScroll: true,
+    replace: true,
+  })
+}
+
+const applyFilters = () => getFilteredData();
+const onPageChange = (page: number) => getFilteredData(page);
 
 watchDebounced(search, applyFilters, { debounce: 500 });
 
@@ -85,7 +86,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
   <AppLayout :breadcrumbs="breadcrumbs">
     <div class="p-6 space-y-4">
-      <Card>
+      <Card class="gap-2">
         <CardHeader>
           <div class="flex items-start justify-between">
             <div>
@@ -120,20 +121,22 @@ const breadcrumbs: BreadcrumbItem[] = [
           </div>
 
           <!-- Table -->
-          <div class="border rounded-md">
+          <div
+            class="overflow-hidden rounded-md border border-gray-200 mb-3 dark:border-zinc-800"
+          >
             <Table>
-              <TableHeader>
+              <TableHeader class="bg-gray-100 text-left text-gray-700 dark:bg-zinc-800">
                 <TableRow>
-                  <TableHead class="w-[50px]">No</TableHead>
-                  <TableHead>Leave Type Name</TableHead>
-                  <TableHead>Deducts Annual Leave?</TableHead>
-                  <TableHead class="text-right">Actions</TableHead>
+                  <TableHead class="w-[50px] text-center dark:text-foreground">No</TableHead>
+                  <TableHead class="dark:text-foreground">Leave Type Name</TableHead>
+                  <TableHead class="dark:text-foreground">Deducts Annual Leave?</TableHead>
+                  <TableHead class="text-right dark:text-foreground">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 <template v-if="data.data.length > 0">
                   <TableRow v-for="(leaveType, index) in data.data" :key="leaveType.id">
-                    <TableCell>{{ data.from + index }}</TableCell>
+                    <TableCell class="text-center">{{ data.from + index }}</TableCell>
                     <TableCell class="font-medium">{{ leaveType.name }}</TableCell>
                     <TableCell>
                       <Badge
@@ -164,7 +167,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                 </template>
                 <template v-else>
                   <TableRow>
-                    <TableCell colspan="4" class="h-24 text-center">
+                    <TableCell colspan="100%" class="text-center text-muted-foreground">
                       No leave types found.
                     </TableCell>
                   </TableRow>
@@ -174,7 +177,7 @@ const breadcrumbs: BreadcrumbItem[] = [
           </div>
         </CardContent>
         <CardFooter v-if="data.data.length > 0">
-          <PaginationWrapper :meta="data" />
+          <PaginationWrapper :meta="data" @change="onPageChange" />
         </CardFooter>
       </Card>
     </div>

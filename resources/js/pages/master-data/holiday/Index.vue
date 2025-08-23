@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { router, Head, Link, useForm } from "@inertiajs/vue3";
+import { router, Head } from "@inertiajs/vue3";
 import AppLayout from "@/layouts/AppLayout.vue";
 import { watchDebounced } from "@vueuse/core";
 import type { Pagination } from "@/types/pagination";
@@ -45,56 +45,11 @@ const props = defineProps<{
   };
 }>();
 
-// --- State untuk Tabel & Filter ---
 const deleteDialog = ref<InstanceType<typeof DeleteConfirmDialog>>();
-const formDialog = ref<InstanceType<typeof FormDialog>>() // <-- TAMBAHKAN INI
+const formDialog = ref<InstanceType<typeof FormDialog>>()
 const search = ref(props.filters.search ?? "");
 const year = ref(props.filters.year ?? new Date().getFullYear().toString());
 
-// --- State untuk Form Dialog ---
-const isDialogOpen = ref(false);
-const isEditMode = ref(false);
-const form = useForm({
-  id: null as number | null,
-  date: null as Date | null,
-  description: "",
-}).transform((data) => ({
-  ...data,
-  date: data.date ? format(data.date, "yyyy-MM-dd") : null,
-}));
-
-// --- Fungsi untuk Membuka Dialog ---
-function openAddDialog() {
-  isEditMode.value = false;
-  form.reset();
-  isDialogOpen.value = true;
-}
-
-function openEditDialog(holiday: Holiday) {
-  isEditMode.value = true;
-  form.id = holiday.id;
-  form.date = new Date(holiday.date);
-  form.description = holiday.description;
-  isDialogOpen.value = true;
-}
-
-// --- Fungsi untuk Submit Form ---
-function submit() {
-  const options = {
-    onSuccess: () => {
-      isDialogOpen.value = false;
-      form.reset();
-    },
-  };
-
-  if (isEditMode.value) {
-    form.put(route("master-data.holiday.update", { holiday: form.id }), options);
-  } else {
-    form.post(route("master-data.holiday.store"), options);
-  }
-}
-
-// --- Logika Filter & Hapus (tidak berubah) ---
 const yearOptions = computed(() => {
   const currentYear = new Date().getFullYear();
   const years = [];
@@ -104,39 +59,28 @@ const yearOptions = computed(() => {
   return years;
 });
 
-const applyFilters = () => {
+function getFilteredData(page?: number) {
   const query: Record<string, any> = {};
+  if (page) query.page = page;
   if (search.value) query.search = search.value;
   if (year.value) query.year = year.value;
+
   router.get(route("master-data.holiday.index"), query, {
     preserveState: true,
     preserveScroll: true,
     replace: true,
   });
-};
+}
 
 function clearFilters() {
   search.value = "";
   year.value = new Date().getFullYear().toString();
 }
 
-watchDebounced([search, year], applyFilters, { debounce: 500 });
+const applyFilters = () => getFilteredData();
+const onPageChange = (page: number) => getFilteredData(page);
 
-const onPageChange = (page: number) => {
-  router.get(
-    route("master-data.holiday.index"),
-    {
-      page,
-      search: search.value,
-      year: year.value,
-    },
-    {
-      preserveState: true,
-      preserveScroll: true,
-      replace: true,
-    }
-  );
-};
+watchDebounced([search, year], applyFilters, { debounce: 500 });
 
 function handleDelete(item: Holiday) {
   deleteDialog.value?.show(item.description, () => {

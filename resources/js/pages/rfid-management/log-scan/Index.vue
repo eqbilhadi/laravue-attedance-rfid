@@ -1,19 +1,11 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref } from 'vue'
 import { router, Head } from '@inertiajs/vue3'
 import { watchDebounced } from '@vueuse/core'
 import type { Pagination } from '@/types/pagination'
-import { Calendar as CalendarIcon, X as XIcon, Search } from 'lucide-vue-next'
-import { format, getYear, setMonth } from 'date-fns'
-import type { DateRange } from 'reka-ui'
-import type { DateValue } from '@internationalized/date'
-// --- Import library @internationalized/date untuk menangani tipe data tanggal ---
-import {
-  CalendarDate,
-  getLocalTimeZone,
-  parseDate,
-  today,
-} from '@internationalized/date'
+import { X as XIcon, Search } from 'lucide-vue-next'
+import { format } from 'date-fns'
+import type { RfidScan } from "@/types";
 
 // --- Shadcn-vue components ---
 import {
@@ -32,53 +24,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
-import { RangeCalendar } from '@/components/ui/range-calendar'
 import Input from '@/components/ui/input/Input.vue'
 import Button from '@/components/ui/button/Button.vue'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 
 // --- Custom components ---
 import AppLayout from '@/layouts/AppLayout.vue'
 import PaginationWrapper from '@/components/Pagination.vue'
 import { type BreadcrumbItem } from '@/types'
 import Badge from '@/components/ui/badge/Badge.vue'
-import { cn } from '@/lib/utils'
 import BaseSelect from '@/components/BaseSelect.vue'
 import DateRangePicker from '@/components/DateRangePicker.vue'
-
-// --- Types ---
-interface Device {
-  id: number
-  device_name: string
-  device_uid: string
-}
-
-interface User {
-  id: string
-  name: string
-}
-
-interface RfidScan {
-  id: number
-  device_uid: string
-  card_uid: string
-  created_at: string
-  device: Device
-  user: User
-}
-
-type RekaDateValue = import('reka-ui').DateValue
 
 const props = defineProps<{
   data: Pagination<RfidScan>
@@ -91,59 +46,31 @@ const props = defineProps<{
   devices: { label: string; value: string }[]
 }>()
 
-// --- State ---
 const device_uid = ref(props.filters?.device_uid ?? '')
 const search = ref(props.filters?.search ?? '')
 const dateFilter = ref({
   start: props.filters.start_date ? new Date(props.filters.start_date) : null,
   end: props.filters.end_date ? new Date(props.filters.end_date) : null,
 })
-const isPopoverOpen = ref(false)
 
-// --- Fungsi untuk memicu request ke server ---
-const applyFilters = () => {
-    const query: Record<string, any> = {};
+function getFilteredData(page?: number) {
+  const query: Record<string, any> = {};
+  if (page) query.page = page;
+  if (search.value) query.search = search.value
+  if (device_uid.value) query.device_uid = device_uid.value
+  if (dateFilter.value.start) query.start_date = format(dateFilter.value.start, "yyyy-MM-dd");
+  if (dateFilter.value.end) query.end_date = format(dateFilter.value.end, "yyyy-MM-dd");
 
-    if (device_uid.value) {
-        query.device_uid = device_uid.value;
-    }
-    
-    if (search.value) {
-        query.search = search.value;
-    }
-
-    if (dateFilter.value?.start && dateFilter.value?.end) {
-        query.start_date = format(dateFilter.value.start, 'yyyy-MM-dd');
-        query.end_date = format(dateFilter.value.end, 'yyyy-MM-dd');
-    }
-
-    router.get(route('rfid-management.log-scan.index'), query, {
-        preserveState: true,
-        preserveScroll: true,
-        replace: true,
-    });
+  router.get(route('rfid-management.log-scan.index'), query, {
+    preserveState: true,
+    preserveScroll: true,
+    replace: true,
+  })
 }
 
-// --- Pagination Handler ---
-function onPageChange(page: number) {
-    const query: Record<string, any> = { page };
+const applyFilters = () => getFilteredData();
+const onPageChange = (page: number) => getFilteredData(page);
 
-    if (device_uid.value) {
-        query.device_uid = device_uid.value;
-    }
-    if (dateFilter.value?.start && dateFilter.value?.end) {
-        query.start_date = format(dateFilter.value.start, 'yyyy-MM-dd');
-        query.end_date = format(dateFilter.value.end, 'yyyy-MM-dd');
-    }
-
-    router.get(route('rfid-management.log-scan.index'), query, {
-        preserveState: true,
-        preserveScroll: true,
-        replace: true,
-    });
-}
-
-// --- Clear filter ---
 function clearFilters() {
   device_uid.value = ''
   search.value = ''
@@ -152,13 +79,11 @@ function clearFilters() {
   applyFilters();
 }
 
-// --- Watchers ---
 watchDebounced([device_uid, search, dateFilter], applyFilters, {
   debounce: 500,
   maxWait: 1000,
 })
 
-// --- Date and Time Formatting Functions ---
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
   return format(date, 'dd MMMM yyyy');
@@ -169,7 +94,6 @@ const formatTime = (dateString: string) => {
   return format(date, 'HH:mm:ss');
 };
 
-// --- Breadcrumbs ---
 const breadcrumbs: BreadcrumbItem[] = [
   { title: 'RFID Management', href: '' },
   { title: 'Log Scans', href: route('rfid-management.log-scan.index') },
@@ -234,7 +158,7 @@ const breadcrumbs: BreadcrumbItem[] = [
               variant="outline"
               class="h-9 px-3 py-2"
               @click="clearFilters"
-              v-if="device_uid || dateFilter || search"
+              v-if="device_uid || dateFilter.start || dateFilter.end || search"
             >
               Clear Filters
             </Button>
