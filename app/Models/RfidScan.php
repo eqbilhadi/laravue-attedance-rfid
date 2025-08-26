@@ -13,6 +13,7 @@ class RfidScan extends Model
     protected $fillable = [
         'device_uid',
         'card_uid',
+        'user_id',
     ];
 
     // Relasi scan milik device
@@ -22,15 +23,20 @@ class RfidScan extends Model
     }
 
     // rfid_scan.card_uid -> user_rfids.uid dan user_rfids.user_id -> users.id
-    public function user(): HasOneThrough
+    // public function user(): HasOneThrough
+    // {
+    //     return $this->hasOneThrough(
+    //         User::class,
+    //         UserRfid::class,
+    //         'uid',
+    //         'id',
+    //         'card_uid',
+    //         'user_id'
+    //     );
+    // }
+
+    public function user(): BelongsTo
     {
-        return $this->hasOneThrough(
-            User::class,
-            UserRfid::class,
-            'uid',
-            'id',
-            'card_uid',
-            'user_id'
-        );
+        return $this->belongsTo(User::class);
     }
 }

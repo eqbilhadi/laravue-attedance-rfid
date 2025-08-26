@@ -104,4 +104,9 @@ class User extends Authenticatable
     {
         return $this->hasOne(UserRfid::class, 'user_id');
     }
+
+    public function leaveRequests(): HasMany
+    {
+        return $this->hasMany(LeaveRequest::class, 'user_id');
+    }
 }
