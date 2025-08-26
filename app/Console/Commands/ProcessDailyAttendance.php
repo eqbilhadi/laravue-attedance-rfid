@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Enum\AttendanceStatus;
 use App\Models\Attendance;
 use App\Models\Holiday;
+use App\Models\RawAttendance;
 use App\Models\RfidScan;
 use App\Models\User;
 use Carbon\Carbon;
@@ -31,108 +32,88 @@ class ProcessDailyAttendance extends Command
      */
     public function handle()
     {
-        // Tentukan tanggal yang akan diproses.
-        // Jika tidak ada flag --date, proses untuk hari kemarin.
         $processingDate = $this->option('date') ? Carbon::parse($this->option('date'))->startOfDay() : Carbon::yesterday()->startOfDay();
         $this->info("Processing attendance for: " . $processingDate->toDateString());
 
-        // 1. Cek apakah hari ini adalah hari libur nasional
         $isHoliday = Holiday::where('date', $processingDate->toDateString())->exists();
-
-        // 2. Ambil semua user yang aktif DAN memiliki kartu RFID terdaftar.
-        // Ini adalah optimisasi agar tidak memproses user yang tidak relevan.
-        // Pastikan Anda sudah menambahkan relasi hasOne('rfidCard') di model User.
         $activeUsers = User::where('is_active', true)->whereHas('rfidCard')->get();
 
         foreach ($activeUsers as $user) {
             $this->info("Processing user: {$user->name}");
 
-            // 3. Cari jadwal yang berlaku untuk user ini pada tanggal yang diproses
             $userSchedule = $user->userSchedules()
                 ->where('start_date', '<=', $processingDate)
-                ->where(fn($q) => $q->where('end_date', '>=', $processingDate)->orWhereNull('end_date'))
+                ->where(fn ($q) => $q->where('end_date', '>=', $processingDate)->orWhereNull('end_date'))
                 ->first();
 
             if (!$userSchedule) {
                 $this->warn("No active schedule found for {$user->name}. Skipping.");
-                continue; // Lanjut ke user berikutnya jika tidak ada jadwal
+                continue;
             }
 
-            // 4. Ambil detail jadwal harian dari Work Schedule
-            $dayOfWeek = $processingDate->dayOfWeekIso; // Senin = 1, Minggu = 7
+            $dayOfWeek = $processingDate->dayOfWeekIso;
             $workScheduleDay = $userSchedule->workSchedule->days()->where('day_of_week', $dayOfWeek)->first();
 
-            // Tentukan status awal berdasarkan jadwal dan hari libur
             $status = AttendanceStatus::ABSENT;
             if ($isHoliday) {
                 $status = AttendanceStatus::HOLIDAY;
             } elseif (!$workScheduleDay || !$workScheduleDay->time) {
-                // Jika tidak ada jadwal harian atau jadwalnya adalah Off Day
                 $status = AttendanceStatus::HOLIDAY;
             }
 
-            // 5. Ambil semua log scan user pada hari itu
-            // Kita mencari berdasarkan card_uid dari relasi rfidCard, bukan user_id.
-            $scans = RfidScan::where('card_uid', $user->rfidCard->uid)
-                ->whereDate('created_at', $processingDate)
-                ->orderBy('created_at', 'asc')
-                ->get();
-
-            $clockIn = $scans->first()?->created_at;
-            $clockOut = $scans->count() > 1 ? $scans->last()?->created_at : null;
+            // --- LOGIKA BARU YANG LEBIH SEDERHANA ---
+            $clockIn = null;
+            $clockOut = null;
             $lateMinutes = 0;
 
-            // 6. Jika ada scan masuk, tentukan status dan hitung keterlambatan
-            if ($clockIn && $status !== AttendanceStatus::HOLIDAY) {
-                $workTime = $workScheduleDay->time;
+            // Ambil data dari tabel log presensi yang bersih
+            $rawAttendance = RawAttendance::where('user_id', $user->id)
+                ->where('date', $processingDate->toDateString())
+                ->first();
 
-                // --- PERBAIKAN DI SINI ---
-                // Buat waktu terjadwal dengan cara yang lebih aman, hindari parsing string.
-                list($hour, $minute) = explode(':', $workTime->start_time);
-                // Cast string to integer to satisfy the setTime() method signature.
-                $scheduledStartTime = $processingDate->copy()->setTime((int)$hour, (int)$minute, 0);
+            if ($rawAttendance) {
+                $clockIn = $rawAttendance->clock_in;
+                $clockOut = $rawAttendance->clock_out;
 
-                // Tambahkan toleransi ke jadwal masuk
-                $deadlineTime = $scheduledStartTime->copy()->addMinutes($workTime->late_tolerance_minutes);
-                
-                // Hitung selisih menit dari waktu terjadwal ke waktu clock-in.
-                if ($clockIn->isAfter($scheduledStartTime)) {
-                    $lateMinutes = (int) $scheduledStartTime->diffInMinutes($clockIn);
-                } else {
-                    $lateMinutes = 0;
+                // Hitung keterlambatan jika ada jam masuk dan bukan hari libur
+                if ($clockIn && $status !== AttendanceStatus::HOLIDAY) {
+                    $workTime = $workScheduleDay->time;
+                    list($startHour, $startMinute) = explode(':', $workTime->start_time);
+                    $scheduledStartTime = $processingDate->copy()->setTime((int)$startHour, (int)$startMinute, 0);
+
+                    if ($clockIn->isAfter($scheduledStartTime)) {
+                        $lateMinutes = (int) $scheduledStartTime->diffInMinutes($clockIn);
+                    }
+
+                    if ($lateMinutes > $workTime->late_tolerance_minutes) {
+                        $status = AttendanceStatus::LATE;
+                    } else {
+                        $status = AttendanceStatus::PRESENT;
+                    }
                 }
+            }
+            
+            // Cek Izin/Sakit/Cuti jika status masih ABSENT
+            if ($status === AttendanceStatus::ABSENT) {
+                $approvedLeave = $user->leaveRequests()
+                    ->with('leaveType')
+                    ->where('status', 'Approved')
+                    ->where('start_date', '<=', $processingDate->toDateString())
+                    ->where('end_date', '>=', $processingDate->toDateString())
+                    ->first();
 
-                // Tentukan status berdasarkan apakah keterlambatan melebihi toleransi.
-                if ($lateMinutes > $workTime->late_tolerance_minutes) {
-                    $status = AttendanceStatus::LATE;
-                } else {
-                    $status = AttendanceStatus::PRESENT;
+                if ($approvedLeave) {
+                    if ($approvedLeave->leaveType->is_deducting_leave) {
+                        $status = AttendanceStatus::LEAVE;
+                    } elseif (stripos($approvedLeave->leaveType->name, 'sakit') !== false) {
+                        $status = AttendanceStatus::SICK;
+                    } else {
+                        $status = AttendanceStatus::PERMIT;
+                    }
                 }
             }
 
-            // --- LOGIKA BARU: Cek Izin/Sakit/Cuti jika status masih ABSENT ---
-            // if ($status === AttendanceStatus::ABSENT) {
-            //     // Asumsi Anda memiliki model LeaveRequest dan relasi leaveRequests() di model User
-            //     $approvedLeave = $user->leaveRequests()
-            //         ->with('leaveType') // Muat relasi ke LeaveType
-            //         ->where('status', 'Approved') // Hanya yang sudah disetujui
-            //         ->where('start_date', '<=', $processingDate->toDateString())
-            //         ->where('end_date', '>=', $processingDate->toDateString())
-            //         ->first();
-
-            //     if ($approvedLeave) {
-            //         // Tentukan status berdasarkan properti di LeaveType
-            //         if ($approvedLeave->leaveType->is_deducting_leave) {
-            //             $status = AttendanceStatus::LEAVE; // Cuti Tahunan, Cuti Bersama
-            //         } elseif (stripos($approvedLeave->leaveType->name, 'sakit') !== false) {
-            //             $status = AttendanceStatus::SICK; // Izin Sakit
-            //         } else {
-            //             $status = AttendanceStatus::PERMIT; // Izin lain (Dinas Luar, dll)
-            //         }
-            //     }
-            // }
-
-            // 7. Simpan atau update data ke tabel trx_attendances
+            // Simpan hasil akhir ke tabel data matang
             Attendance::updateOrCreate(
                 [
                     'user_id' => $user->id,
