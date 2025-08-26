@@ -16,8 +16,7 @@ return new class extends Migration
             $table->string('device_uid', 20);
             $table->foreign('device_uid')
                 ->references('device_uid')
-                ->on('sys_devices')
-                ->cascadeOnDelete();
+                ->on('sys_devices');
             $table->string('card_uid');
             $table->timestamps();
         });
