@@ -5,7 +5,7 @@ import AppLayout from "@/layouts/AppLayout.vue";
 import { watchDebounced } from "@vueuse/core";
 import type { Pagination } from "@/types/pagination";
 import type { Attendance, User, BreadcrumbItem, WorkTime } from "@/types";
-import { format, getDay } from "date-fns";
+import { format, getDay, intervalToDuration } from "date-fns";
 import "vue-sonner/style.css";
 import { useInitials } from "@/composables/useInitials";
 
@@ -41,7 +41,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import Label from "@/components/ui/label/Label.vue";
-import { Search, Play, LoaderCircle, Calendar as CalendarIcon } from "lucide-vue-next";
+import { Search, Play, LoaderCircle, FileInput, FileOutput } from "lucide-vue-next";
 import DatePicker from "@/components/DatePicker.vue";
 
 const props = defineProps<{
@@ -95,7 +95,8 @@ function getFilteredData(page?: number) {
   if (page) query.page = page;
   if (search.value) query.search = search.value;
   if (status.value) query.status = status.value;
-  if (dateRange.value.start) query.start_date = format(dateRange.value.start, "yyyy-MM-dd");
+  if (dateRange.value.start)
+    query.start_date = format(dateRange.value.start, "yyyy-MM-dd");
   if (dateRange.value.end) query.end_date = format(dateRange.value.end, "yyyy-MM-dd");
 
   router.get(route("attendance.data.index"), query, {
@@ -149,6 +150,15 @@ const statusVariant = (status: string) => {
     default:
       return "secondary";
   }
+};
+
+const calculateWorkHours = (att: Attendance): string => {
+  if (!att.clock_in || !att.clock_out) return "-";
+  const duration = intervalToDuration({
+    start: new Date(att.clock_in),
+    end: new Date(att.clock_out),
+  });
+  return `${duration.hours || 0}h ${duration.minutes || 0}m`;
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -228,10 +238,8 @@ const breadcrumbs: BreadcrumbItem[] = [
                   <TableHead class="dark:text-foreground">Date</TableHead>
                   <TableHead class="dark:text-foreground">Schedule</TableHead>
                   <TableHead class="dark:text-foreground">Clock In / Out</TableHead>
-                  <TableHead class="dark:text-foreground">Late</TableHead>
-                  <TableHead class="text-center pe-3 dark:text-foreground"
-                    >Status</TableHead
-                  >
+                  <TableHead class="dark:text-foreground">Work Hours</TableHead>
+                  <TableHead class="text-center pe-3 dark:text-foreground">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -280,24 +288,41 @@ const breadcrumbs: BreadcrumbItem[] = [
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div class="flex flex-col">
-                        <span :class="{ 'text-destructive': att.status === 'Late' }">{{
-                          att.clock_in ? format(new Date(att.clock_in), "HH:mm:ss") : "-"
-                        }}</span>
-                        <span class="text-muted-foreground">{{
-                          att.clock_out
-                            ? format(new Date(att.clock_out), "HH:mm:ss")
-                            : "-"
-                        }}</span>
+                      <div class="flex flex-col gap-1 text-sm">
+                        <div class="flex items-center gap-2">
+                          <FileInput class="w-4 h-4" />
+                          <span
+                            :class="{
+                              'text-destructive font-semibold': att.status === 'Late',
+                            }"
+                            >{{
+                              att.clock_in
+                                ? format(new Date(att.clock_in), "HH:mm:ss")
+                                : "--:--:--"
+                            }}</span
+                          >
+                        </div>
+                        <div class="flex items-center gap-2 text-muted-foreground">
+                          <FileOutput class="w-4 h-4" />
+                          <span>{{
+                            att.clock_out
+                              ? format(new Date(att.clock_out), "HH:mm:ss")
+                              : "--:--:--"
+                          }}</span>
+                        </div>
                       </div>
                     </TableCell>
-                    <TableCell>{{
-                      att.late_minutes > 0 ? `${att.late_minutes} mins` : "-"
-                    }}</TableCell>
+                    <TableCell>
+                      <div class="flex items-center gap-2 text-sm font-medium">
+                        <span>{{ calculateWorkHours(att) }}</span>
+                      </div>
+                    </TableCell>
                     <TableCell class="text-center">
-                      <Badge :variant="statusVariant(att.status)">
-                        {{ att.status }}
-                      </Badge>
+                      <div class="flex flex-col items-center gap-1">
+                        <Badge :variant="statusVariant(att.status)" class="items-center">
+                          {{ att.status }} <div v-if="att.late_minutes > 0">{{ att.late_minutes }} mins</div>
+                        </Badge>
+                      </div>
                     </TableCell>
                   </TableRow>
                 </template>
