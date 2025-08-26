@@ -2,6 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Enum\AttendanceStatus;
+use App\Enum\LeaveRequestStatus;
+use App\Models\Attendance;
+use App\Models\LeaveRequest;
+use App\Models\RawAttendance;
 use App\Models\RfidScan;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -11,112 +16,250 @@ use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
+    /**
+     * Menampilkan halaman utama Dashboard (tanpa data awal).
+     * Data akan diambil oleh frontend melalui endpoint API.
+     */
     public function index()
     {
-        // === Kategori 1: Ringkasan & Monitoring Real-time ===
+        return Inertia::render('Dashboard');
+    }
 
-        // --- Statistik Kehadiran Hari Ini ---
-        $totalParticipants = User::count();
-        $scansToday = RfidScan::whereDate('sys_rfid_scans.created_at', today())
-            ->join('sys_user_rfids', 'sys_user_rfids.uid', '=', 'sys_rfid_scans.card_uid')->get();
+    // --- API ENDPOINTS ---
 
-        $presentCount = $scansToday->unique('user_id')->whereNotNull('user_id')->count();
-        // Asumsi terlambat adalah scan setelah jam 07:00
-        $lateCount = $scansToday->unique('user_id')->whereNotNull('user_id')->filter(function ($scan) {
-            return Carbon::parse($scan->created_at)->format('H:i:s') > '15:50:00';
-        })->count();
+    /**
+     * Menyediakan data untuk kartu ringkasan (summary cards).
+     */
+    public function getSummaryCards()
+    {
+        $today = Carbon::today();
+        $liveAttendance = $this->getLiveAttendanceSummaryData($today);
+        $liveAttendanceCollection = collect($liveAttendance);
 
-        $attendanceToday = [
-            'total' => $totalParticipants,
-            'present' => $presentCount,
-            'late' => $lateCount,
-            'absent' => $totalParticipants - $presentCount,
-        ];
-
-        // --- Aktivitas Scan Terakhir ---
-        $lastScans = RfidScan::with(['user:sys_users.id,name', 'device:device_uid,device_name'])
-            ->whereDate('created_at', today())
-            ->latest()
-            ->limit(5)
-            ->get()
-            ->map(function ($scan) {
-                return [
-                    'name' => $scan->user->name ?? 'Unregistered Card',
-                    'class' => $scan->device->device_name ?? 'Unknown Device', // Ganti dengan data kelas jika ada
-                    'time' => Carbon::parse($scan->created_at)->format('H:i:s'),
-                    'status' => Carbon::parse($scan->created_at)->format('H:i:s') > '15:50:00' ? 'Late' : 'On Time',
-                ];
-            });
-
-        // === Kategori 2: Analisis & Tren Kehadiran ===
-
-        // --- Tren Kehadiran Mingguan ---
-        $weeklyTrend = RfidScan::whereBetween('sys_rfid_scans.created_at', [today()->subDays(6), today()->endOfDay()])
-            ->select(
-                DB::raw('DATE(sys_rfid_scans.created_at) as date'),
-                DB::raw('COUNT(DISTINCT sys_user_rfids.user_id) as present_count'),
-                DB::raw("COUNT(DISTINCT CASE WHEN TO_CHAR(sys_rfid_scans.created_at, 'HH24:MI:SS') > '15:50:00' THEN sys_user_rfids.user_id END) as late_count")
-            )
-            ->join('sys_user_rfids', 'sys_user_rfids.uid', '=', 'sys_rfid_scans.card_uid')
-            ->whereNotNull('sys_user_rfids.user_id')
-            ->groupBy('date')
-            ->orderBy('date', 'asc')
-            ->get();
-
-
-        $weeklyDates = collect();
-        for ($i = 6; $i >= 0; $i--) {
-            $date = today()->subDays($i);
-            $weeklyDates->push([
-                'day' => $date->format('D'),
-                'full_date' => $date->format('Y-m-d'),
-            ]);
-        }
-
-        $weeklyTrendSeries = [
-            'present' => $weeklyDates->map(fn ($d) => $weeklyTrend->firstWhere('date', $d['full_date'])?->present_count ?? 0)->values(),
-            'late' => $weeklyDates->map(fn ($d) => $weeklyTrend->firstWhere('date', $d['full_date'])?->late_count ?? 0)->values(),
-            'absent' => $weeklyDates->map(fn ($d) => $totalParticipants - ($weeklyTrend->firstWhere('date', $d['full_date'])?->present_count ?? 0))->values(),
-            'categories' => $weeklyDates->pluck('day'),
-        ];
-
-
-        // === Kategori 3: Kesehatan Sistem ===
-
-        // --- Aktivitas Scan Perangkat Hari Ini ---
-        $deviceActivity = RfidScan::with('device:device_uid,device_name')
-            ->whereDate('sys_rfid_scans.created_at', today())
-            ->leftJoin('sys_user_rfids', 'sys_user_rfids.uid', '=', 'sys_rfid_scans.card_uid')
-            ->select('device_uid',
-                DB::raw('count(CASE WHEN sys_user_rfids.user_id IS NOT NULL THEN 1 END) as registered_scans'),
-                DB::raw('count(CASE WHEN sys_user_rfids.user_id IS NULL THEN 1 END) as unregistered_scans')
-            )
-            ->groupBy('device_uid')
-            ->get();
+        // Hitung metrik dari data live
+        $presentCount = $liveAttendanceCollection->whereIn('status', ['Present', 'Checked Out'])->count();
+        $lateCount = $liveAttendanceCollection->where('status', 'Late')->count();
+        $notYetArrivedCount = $liveAttendanceCollection->where('status', 'Not Yet Arrived')->count();
+        $absentCount = $liveAttendanceCollection->where('status', 'Absent')->count();
         
-        // Ambil nama device untuk label chart
-        $deviceNames = $deviceActivity->map(fn($item) => $item->device->device_name ?? $item->device_uid);
+        $totalActiveUsers = User::where('is_active', true)->count();
+        $scheduledTodayCount = $liveAttendanceCollection->count();
+        $onDayOffCount = $totalActiveUsers - $scheduledTodayCount;
 
-        $deviceActivitySeries = [
-            [
-                'name' => 'Registered',
-                'data' => $deviceActivity->pluck('registered_scans'),
-            ],
-            [
-                'name' => 'Unregistered',
-                'data' => $deviceActivity->pluck('unregistered_scans'),
+        return response()->json([
+            'scheduled_today' => $scheduledTodayCount,
+            'present_today' => $presentCount + $lateCount,
+            'late_today' => $lateCount,
+            'absent_today' => $absentCount,
+            'not_yet_arrived' => $notYetArrivedCount,
+            'on_day_off_today' => $onDayOffCount,
+            'on_leave_today' => LeaveRequest::where('status', LeaveRequestStatus::APPROVED)
+                ->where('start_date', '<=', $today)
+                ->where('end_date', '>=', $today)
+                ->count(),
+            'pending_requests' => LeaveRequest::where('status', LeaveRequestStatus::PENDING)->count(),
+        ]);
+    }
+
+    /**
+     * Menyediakan data untuk tabel live attendance.
+     */
+    public function getLiveAttendanceSummary()
+    {
+        return response()->json($this->getLiveAttendanceSummaryData(Carbon::today()));
+    }
+
+    /**
+     * Menyediakan data untuk semua diagram.
+     */
+    public function getChartData()
+    {
+        $today = Carbon::today();
+        $startOfWeek = $today->copy()->startOfWeek();
+        $endOfWeek = $today->copy()->endOfWeek();
+        $startOfMonth = $today->copy()->startOfMonth();
+
+        return response()->json([
+            'weekly_attendance' => $this->getWeeklyAttendanceChartData($startOfWeek, $endOfWeek),
+            'monthly_status_distribution' => $this->getMonthlyStatusDistribution($startOfMonth, $today),
+        ]);
+    }
+
+    /**
+     * Menyediakan data untuk statistik cepat.
+     */
+    public function getQuickStats()
+    {
+        $startOfMonth = Carbon::today()->startOfMonth();
+        $endOfMonth = Carbon::today()->endOfMonth();
+
+        $employeeOfTheMonth = Attendance::query()
+            ->select('user_id', 
+                DB::raw('COUNT(CASE WHEN status = \'Present\' THEN 1 END) as present_count'),
+                DB::raw('SUM(late_minutes) as total_late_minutes')
+            )
+            ->whereBetween('date', [$startOfMonth, $endOfMonth])
+            ->groupBy('user_id')
+            ->orderBy('present_count', 'desc')
+            ->orderBy('total_late_minutes', 'asc')
+            ->with('user:id,name,avatar,gender')
+            ->first();
+
+        $mostLateEmployees = Attendance::query()
+            ->select('user_id', DB::raw('COUNT(*) as late_count'))
+            ->where('status', AttendanceStatus::LATE)
+            ->whereBetween('date', [$startOfMonth, $endOfMonth])
+            ->groupBy('user_id')
+            ->orderBy('late_count', 'desc')
+            ->with('user:id,name,avatar,gender')
+            ->limit(3)
+            ->get();
+
+        return response()->json([
+            'employee_of_the_month' => $employeeOfTheMonth,
+            'most_late_employees' => $mostLateEmployees,
+        ]);
+    }
+
+
+    // --- HELPER FUNCTIONS (Private) ---
+
+    private function getLiveAttendanceSummaryData(Carbon $today): array
+    {
+        $liveSummary = [];
+        $currentTime = now();
+
+        $scheduledUsers = User::where('is_active', true)
+            ->whereHas('userSchedules', function ($query) use ($today) {
+                $query->where('start_date', '<=', $today)
+                      ->where(fn ($q) => $q->where('end_date', '>=', $today)->orWhereNull('end_date'));
+            })
+            ->with(['userSchedules.workSchedule.days.time'])
+            ->get();
+
+        foreach ($scheduledUsers as $user) {
+            $userSchedule = $user->userSchedules->first();
+            $workScheduleDay = $userSchedule->workSchedule->days->firstWhere('day_of_week', $today->dayOfWeekIso);
+
+            if (!$workScheduleDay || !$workScheduleDay->time) {
+                continue;
+            }
+
+            $rawAttendance = RawAttendance::where('user_id', $user->id)
+                ->where('date', $today->toDateString())
+                ->first();
+
+            $workTime = $workScheduleDay->time;
+            list($startHour, $startMinute) = explode(':', $workTime->start_time);
+            list($endHour, $endMinute) = explode(':', $workTime->end_time);
+            
+            $scheduledStartTime = $today->copy()->setTime((int)$startHour, (int)$startMinute);
+            $scheduledEndTime = $today->copy()->setTime((int)$endHour, (int)$endMinute);
+
+            if ($scheduledEndTime->lt($scheduledStartTime)) {
+                $scheduledEndTime->addDay();
+            }
+
+            $status = 'Not Yet Arrived';
+
+            if ($rawAttendance?->clock_in) {
+                $status = $rawAttendance->clock_in->isAfter($scheduledStartTime->copy()->addMinutes($workTime->late_tolerance_minutes)) ? 'Late' : 'Present';
+                if ($rawAttendance->clock_out) {
+                    $status = 'Checked Out';
+                }
+            } else {
+                if ($currentTime->isAfter($scheduledEndTime)) {
+                    $status = 'Absent';
+                }
+            }
+
+            $liveSummary[] = [
+                'user_name' => $user->name,
+                'avatar_url' => $user->avatar_url,
+                'clock_in' => $rawAttendance?->clock_in?->format('H:i') ?? '-',
+                'clock_out' => $rawAttendance?->clock_out?->format('H:i') ?? '-',
+                'status' => $status,
+                'work_time_start' => $workTime->start_time,
+                'work_time_end' => $workTime->end_time,
+            ];
+        }
+        return $liveSummary;
+    }
+
+    /**
+     * Helper: Mengambil data untuk diagram tren kehadiran mingguan.
+     */
+    private function getWeeklyAttendanceChartData(Carbon $start, Carbon $end): array
+    {
+        $dates = collect(Carbon::parse($start)->daysUntil($end));
+
+        $weeklyData = Attendance::whereBetween('date', [$start, $end])
+            ->selectRaw('date, status, count(*) as total')
+            ->groupBy('date', 'status')
+            ->toBase() // supaya keluar stdClass, lebih ringan
+            ->get();
+
+        return [
+            'labels' => $dates->map(fn($date) => $date->format('D, d M')),
+            'datasets' => [
+                [
+                    'label' => 'Present',
+                    'data' => $dates->map(
+                        fn($date) =>
+                        $weeklyData
+                            ->first(fn($item) => $item->date === $date->toDateString() && $item->status === 'Present')
+                            ->total ?? 0
+                    ),
+                    'backgroundColor' => '#10B981',
+                ],
+                [
+                    'label' => 'Late',
+                    'data' => $dates->map(
+                        fn($date) =>
+                        $weeklyData
+                            ->first(fn($item) => $item->date === $date->toDateString() && $item->status === 'Late')
+                            ->total ?? 0
+                    ),
+                    'backgroundColor' => '#EF4444',
+                ],
+                [
+                    'label' => 'Absent',
+                    'data' => $dates->map(
+                        fn($date) =>
+                        $weeklyData
+                            ->first(fn($item) => $item->date === $date->toDateString() && $item->status === 'Absent')
+                            ->total ?? 0
+                    ),
+                    'backgroundColor' => '#6B7280',
+                ],
             ]
         ];
+    }
 
 
-        return Inertia::render('Dashboard', [
-            'attendanceToday' => $attendanceToday,
-            'lastScans' => $lastScans,
-            'weeklyTrend' => $weeklyTrendSeries,
-            'deviceActivity' => [
-                'series' => $deviceActivitySeries,
-                'categories' => $deviceNames,
-            ],
-        ]);
+     private function getMonthlyStatusDistribution(Carbon $start, Carbon $end): array
+    {
+        $monthlyData = Attendance::whereBetween('date', [$start, $end])
+            ->selectRaw('status, count(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status');
+
+        return [
+            'labels' => $monthlyData->keys()->all(),
+            'datasets' => [[
+                'data' => $monthlyData->values()->all(),
+                'backgroundColor' => $monthlyData->keys()->map(function ($status) {
+                    return match ($status) {
+                        'Present' => '#10B981',
+                        'Late' => '#EF4444',
+                        'Absent' => '#6B7280',
+                        'Sick', 'Permit' => '#F59E0B',
+                        'Leave' => '#3B82F6',
+                        'Holiday' => '#E5E7EB',
+                        default => '#9CA3AF',
+                    };
+                })->all(),
+            ]],
+        ];
     }
 }

@@ -42,7 +42,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Dashboard
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
-
+    Route::prefix('dashboard')->name('dashboard.')->group(function () {
+        // Endpoint untuk mengambil data via fetch
+        Route::get('/summary-cards', [DashboardController::class, 'getSummaryCards'])->name('summary-cards');
+        Route::get('/live-attendance', [DashboardController::class, 'getLiveAttendanceSummary'])->name('live-attendance');
+        Route::get('/charts', [DashboardController::class, 'getChartData'])->name('charts');
+        Route::get('/quick-stats', [DashboardController::class, 'getQuickStats'])->name('quick-stats');
+    });
+    
     // Grup untuk Role-Based Access Control (RBAC)
     Route::prefix('rbac')->name('rbac.')->group(function () {
 

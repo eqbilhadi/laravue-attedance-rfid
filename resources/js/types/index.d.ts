@@ -150,3 +150,57 @@ export interface LeaveRequest {
   approver: User | null;
   rejection_reason: string;
 }
+
+export interface SummaryCards {
+  present_today: number;
+  late_today: number;
+  on_leave_today: number;
+  pending_requests: number;
+  scheduled_today: number;
+  not_yet_arrived: number;
+  absent_today: number;
+  on_day_off_today: number;
+}
+
+export interface LiveAttendance {
+  user_name: string;
+  avatar_url: string | null;
+  clock_in: string;
+  clock_out: string;
+  status: 'Present' | 'Late' | 'Checked Out' | 'Not Yet Arrived' | 'Absent';
+  work_time_start: string;
+  work_time_end: string; 
+}
+
+interface ChartDataset {
+    label?: string;
+    data: number[];
+    backgroundColor: string | string[];
+}
+
+interface ChartData {
+    labels: string[];
+    datasets: ChartDataset[];
+}
+
+export interface Charts {
+    weekly_attendance: ChartData;
+    monthly_status_distribution: ChartData;
+}
+
+interface EmployeeOfTheMonth {
+  user: User;
+  present_count: number;
+}
+
+// Tipe untuk data Most Late Employees
+interface MostLateEmployee {
+  user: User;
+  late_count: number;
+}
+
+// Ini adalah tipe utama untuk prop quickStats
+export interface QuickStats {
+  employee_of_the_month: EmployeeOfTheMonth | null;
+  most_late_employees: MostLateEmployee[];
+}
