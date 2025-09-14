@@ -8,10 +8,28 @@ import { Link, usePage } from '@inertiajs/vue3';
 import { BookOpen, Folder, LayoutGrid } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 import { type Menus, type SharedData } from '@/types';
+import { ref, watch, onMounted, nextTick } from 'vue';
 
 const page = usePage<SharedData>();
 const menus = page.props.menus as Menus[];
 
+const sidebarContentRef = ref(null); 
+
+const scrollToActiveLink = async () => { 
+  await nextTick(); 
+  
+  const container = (sidebarContentRef.value as any)?.$el; 
+  if (!container) return; 
+
+  const activeLink = container.querySelector('a[data-active="true"]'); 
+  if (activeLink) { 
+    activeLink.scrollIntoView({ 
+      behavior: 'smooth', 
+      block: 'nearest',   
+    }); 
+  } 
+}; 
+onMounted(scrollToActiveLink); 
 </script>
 
 <template>
@@ -28,7 +46,7 @@ const menus = page.props.menus as Menus[];
             </SidebarMenu>
         </SidebarHeader>
 
-        <SidebarContent>
+        <SidebarContent ref="sidebarContentRef">
             <NavMain :items="menus" />
         </SidebarContent>
 
