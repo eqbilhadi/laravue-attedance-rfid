@@ -22,7 +22,7 @@ class RfidController extends Controller
         try {
             $deviceUid = $request->device_uid;
             $cardUid = $request->uid;
-            $currentTime = now();
+            $currentTime = now()->setDate(2025, 8, 17)->setTime(7, 0, 0);
 
             // 1. Selalu catat setiap tap ke log audit murni
             $rfidScan = RfidScan::create([
@@ -49,10 +49,21 @@ class RfidController extends Controller
             $activeSession = $this->getActiveWorkSessionForTime($user, $currentTime);
 
             if (!$activeSession) {
-                // Tidak ada session aktif → cek libur nasional langsung berdasarkan currentTime
+                // Cek libur nasional langsung berdasarkan currentTime
                 $holiday = Holiday::whereDate('date', $currentTime->toDateString())->first();
                 if ($holiday) {
                     return new RfidResource(false, "Hari ini libur nasional: {$holiday->description}.", "HARI LIBUR NASIONAL", null);
+                }
+
+                // Cek apakah user mempunyai cuti atau izin 
+                $approvedLeave = $user->leaveRequests()
+                    ->with('leaveType')
+                    ->where('status', 'Approved')
+                    ->where('start_date', '<=', $currentTime->toDateString())
+                    ->where('end_date', '>=', $currentTime->toDateString())
+                    ->first();
+                if ($approvedLeave) {
+                    return new RfidResource(false, "Hari ini anda cuti atau izin: {$approvedLeave->leaveType->name}.", "CUTI / IZIN", null);
                 }
 
                 // Cek apakah user punya assignment jadwal sama sekali atau tidak
@@ -67,6 +78,17 @@ class RfidController extends Controller
             $holiday = Holiday::whereDate('date', $activeSession['start']->toDateString())->first();
             if ($holiday) {
                 return new RfidResource(false, "Tanggal {$activeSession['start']->toDateString()} adalah libur nasional: {$holiday->description}.", "HARI LIBUR NASIONAL", null);
+            }
+
+            // Cek apakah user mempunyai cuti atau izin 
+            $approvedLeave = $user->leaveRequests()
+                ->with('leaveType')
+                ->where('status', 'Approved')
+                ->where('start_date', '<=', $activeSession['start']->toDateString())
+                ->where('end_date', '>=', $activeSession['start']->toDateString())
+                ->first();
+            if ($approvedLeave) {
+                return new RfidResource(false, "Hari ini anda cuti atau izin: {$approvedLeave->leaveType->name}.", "CUTI / IZIN", null);
             }
 
             // 4. Cari data presensi mentah yang mungkin sudah ada untuk sesi ini

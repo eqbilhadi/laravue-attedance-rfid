@@ -9,4 +9,4 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 
-Route::post('/check-rfid', [Api\RfidController::class, 'check']);
+Route::post('/check-rfid', [Api\TapCardController::class, 'check']);
