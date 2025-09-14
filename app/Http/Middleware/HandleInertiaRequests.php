@@ -61,7 +61,8 @@ class HandleInertiaRequests extends Middleware
             'menus' => $this->getMenus()?->map->toArray(),
             'flash' => [
                 'success' => fn() => $request->session()->get('success'),
-                'error' => fn() => $request->session()->get('error')
+                'error' => fn() => $request->session()->get('error'),
+                'data' => fn() => $request->session()->get('data'),
             ],
         ];
     }

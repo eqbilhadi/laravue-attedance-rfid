@@ -16,6 +16,8 @@ use App\Http\Controllers\MasterData\LeaveTypeController;
 use App\Http\Controllers\MasterData\ScheduleAssignmentController;
 use App\Http\Controllers\MasterData\WorkScheduleController;
 use App\Http\Controllers\MasterData\WorkTimeController;
+use App\Http\Controllers\Reports\LateReportController;
+use App\Http\Controllers\Reports\MonthlyReportController;
 use App\Http\Controllers\RfidManagement\CardListController;
 use App\Http\Controllers\RfidManagement\DevicesController;
 use App\Http\Controllers\RfidManagement\LogScanController;
@@ -49,7 +51,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/charts', [DashboardController::class, 'getChartData'])->name('charts');
         Route::get('/quick-stats', [DashboardController::class, 'getQuickStats'])->name('quick-stats');
     });
-    
+
     // Grup untuk Role-Based Access Control (RBAC)
     Route::prefix('rbac')->name('rbac.')->group(function () {
 
@@ -166,6 +168,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->names('request');
         Route::get('approval', [LeaveApprovalController::class, 'index'])->name('approval.index');
         Route::put('approval/{leaveRequest}', [LeaveApprovalController::class, 'update'])->name('approval.update');
+    });
+
+    Route::prefix('reports')->name('reports.')->group(function () {
+        Route::get('monthly', [MonthlyReportController::class, 'index'])->name('monthly.index');
+        Route::post('monthly/export', [MonthlyReportController::class, 'export'])->name('monthly.export');
+        Route::get('monthly/export/download/{filename}', [MonthlyReportController::class, 'downloadExport'])->name('monthly.export.download');
+
+        Route::get('/late', [LateReportController::class, 'index'])->name('late.index');
+        Route::post('/late/export', [LateReportController::class, 'export'])->name('late.export');
+        Route::get('/late/export/download/{filename}', [LateReportController::class, 'downloadExport'])->name('late.export.download');
     });
 
     // Rute untuk streaming file dari storage

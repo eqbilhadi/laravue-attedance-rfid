@@ -173,14 +173,14 @@ const breadcrumbs: BreadcrumbItem[] = [
                     />
                     <InputError :message="form.errors.rejection_reason" />
                 </div>
-                <p v-else class="font-base text-sm">
+                <div v-else class="font-base text-sm">
                   <div class="relative w-full rounded-lg border px-4 py-3 text-sm [&amp;&gt;svg+div]:translate-y-[-3px] [&amp;&gt;svg]:absolute [&amp;&gt;svg]:left-4 [&amp;&gt;svg]:top-4 [&amp;&gt;svg]:text-foreground [&amp;&gt;svg~*]:pl-7 bg-background text-foreground" role="alert" bis_skin_checked="1">
                     <h5 class="mb-1 font-medium leading-none tracking-tight">Confirmation</h5>
                     <div class="text-sm [&amp;_p]:leading-relaxed" bis_skin_checked="1"> 
                       Please confirm to approve this request. This action cannot be undone.
                     </div>
                   </div>
-                </p>
+                </div>
                  <DialogFooter class="!mt-6">
                     <Button type="button" variant="outline" @click="isDialogOpen = false">Cancel</Button>
                     <Button type="submit" :disabled="form.processing" :variant="approvalAction === 'reject' ? 'destructive' : 'default'">

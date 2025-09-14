@@ -42,7 +42,6 @@ class AttendanceController extends Controller
             'data' => $data,
             'filters' => $request->only(['search', 'status', 'start_date', 'end_date']),
             'users' => User::select('id', 'name')->where('is_active', true)->orderBy('name')->get(),
-            // Mengirim daftar status dari Enum ke frontend
             'statuses' => collect(AttendanceStatus::cases())->map(fn ($status) => [
                 'label' => $status->value,
                 'value' => $status->value,
