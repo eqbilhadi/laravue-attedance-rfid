@@ -14,6 +14,7 @@ export function connectMqtt(onMessage?: (topic: string, payload: Buffer) => void
     password: import.meta.env.VITE_MQTT_PASSWORD,
     protocol: "wss",
     clientId: "vue-app-" + Math.random().toString(16).substr(2, 8),
+    reconnectPeriod: 3000,
   };
 
   client = mqtt.connect(brokerUrl, options);
@@ -24,6 +25,10 @@ export function connectMqtt(onMessage?: (topic: string, payload: Buffer) => void
 
   client.on("error", (err) => {
     console.error("❌ MQTT Error:", err.message);
+  });
+
+  client.on("reconnect", () => {
+    console.log("🔄 MQTT Reconnecting...");
   });
 
   client.on("close", () => {

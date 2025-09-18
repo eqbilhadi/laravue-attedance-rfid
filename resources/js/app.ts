@@ -7,6 +7,7 @@ import { createApp, h } from 'vue';
 import { ZiggyVue } from 'ziggy-js';
 import { initializeTheme } from './composables/useAppearance';
 import VueApexCharts from 'vue3-apexcharts'
+import { MotionPlugin } from '@vueuse/motion';
 
 // Extend ImportMeta interface for Vite...
 declare module 'vite/client' {
@@ -31,6 +32,7 @@ createInertiaApp({
             .use(plugin)
             .use(ZiggyVue)
             .use(VueApexCharts)
+            .use(MotionPlugin)
             .component('ApexChart', VueApexCharts)
             .mount(el);
     },

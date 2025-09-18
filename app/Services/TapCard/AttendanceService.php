@@ -5,6 +5,7 @@ namespace App\Services\TapCard;
 use App\Models\Holiday;
 use App\Models\RawAttendance;
 use App\Models\User;
+use App\Services\Mqtt\MqttService;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
 
@@ -14,6 +15,13 @@ use Illuminate\Validation\ValidationException;
  */
 class AttendanceService
 {
+    protected MqttService $mqtt;
+
+    public function __construct(MqttService $mqtt)
+    {
+        $this->mqtt = $mqtt;
+    }
+
     /**
      * Memproses tap presensi, menentukan apakah itu masuk atau pulang.
      */
@@ -46,6 +54,13 @@ class AttendanceService
         // Cek libur nasional langsung berdasarkan currentTime
         $holiday = Holiday::whereDate('date', $currentTime->toDateString())->first();
         if ($holiday) {
+            $this->mqtt->publish('attendance', json_encode([
+                'user' => $user,
+                'attendance' => null,
+                'status' => 'holiday',
+                'message' => "Hari ini libur nasional: {$holiday->description}."
+            ]));
+
             throw ValidationException::withMessages([
                 'title' => 'HARI LIBUR NASIONAL',
                 'message' => "Hari ini libur nasional: {$holiday->description}."
@@ -57,11 +72,25 @@ class AttendanceService
 
         // Cek jadwal
         if ($user->userSchedules->isEmpty()) {
+            $this->mqtt->publish('attendance', json_encode([
+                'user' => $user,
+                'attendance' => null,
+                'status' => 'no_schedule',
+                'message' => 'Anda belum memiliki assignment jadwal kerja.'
+            ]));
+
             throw ValidationException::withMessages([
                 'title' => 'TIDAK ADA JADWAL',
                 'message' => 'Anda belum memiliki assignment jadwal kerja.'
             ]);
         }
+
+        $this->mqtt->publish('attendance', json_encode([
+            'user' => $user,
+            'attendance' => null,
+            'status' => 'holiday',
+            'message' => 'Hari ini adalah jadwal libur Anda.'
+        ]));
 
         throw ValidationException::withMessages([
             'title' => 'HARI LIBUR',
@@ -75,6 +104,13 @@ class AttendanceService
     private function handleClockIn(User $user, Carbon $currentTime, array $activeSession): array
     {
         if ($currentTime->lt($activeSession['window_start'])) {
+            $this->mqtt->publish('attendance', json_encode([
+                'user' => $user,
+                'attendance' => null,
+                'status' => 'too_early_to_clock_in',
+                'message' => "Jadwal masuk Anda pukul {$activeSession['start']->format('H:i')}.\nAnda bisa scan 2 jam sebelumnya."
+            ]));
+
             throw ValidationException::withMessages([
                 'title' => 'BELUM WAKTUNYA MASUK',
                 'message' => "Jadwal masuk Anda pukul {$activeSession['start']->format('H:i')}.\nAnda bisa scan 2 jam sebelumnya."
@@ -82,17 +118,31 @@ class AttendanceService
         }
 
         if ($currentTime->gte($activeSession['end'])) {
+            $this->mqtt->publish('attendance', json_encode([
+                'user' => $user,
+                'attendance' => null,
+                'status' => 'work_session_ended',
+                'message' => "Sesi kerja Anda berakhir pada pukul {$activeSession['end']->format('H:i')}.\nAnda absen."
+            ]));
+
             throw ValidationException::withMessages([
                 'title' => 'SESI KERJA BERAKHIR',
                 'message' => "Sesi kerja Anda berakhir pada pukul {$activeSession['end']->format('H:i')}.\nAnda absen."
             ]);
         }
 
-        RawAttendance::create([
+        $attendance = RawAttendance::create([
             'user_id' => $user->id,
             'date' => $activeSession['start']->toDateString(),
             'clock_in' => $currentTime,
         ]);
+
+        $this->mqtt->publish('attendance', json_encode([
+            'user' => $user,
+            'attendance' => $attendance,
+            'status' => 'clocked_in',
+            'message' => "Selamat Datang\n{$user->name}\nAnda masuk pukul {$currentTime->format('H:i')} WIB."
+        ]));
 
         return [
             'success' => true,
@@ -107,6 +157,13 @@ class AttendanceService
     private function handleClockOut(RawAttendance $rawAttendance, Carbon $currentTime, array $activeSession): array
     {
         if ($rawAttendance->clock_out) {
+            $this->mqtt->publish('attendance', json_encode([
+                'user' => $rawAttendance->user,
+                'attendance' => $rawAttendance,
+                'status' => 'already_clocked_out',
+                'message' => "Anda sudah melakukan presensi pulang"
+            ]));
+
             throw ValidationException::withMessages([
                 'title' => 'SUDAH PULANG',
                 'message' => "Anda sudah melakukan presensi pulang pada pukul " . $rawAttendance->clock_out->format('H:i') . "."
@@ -114,13 +171,27 @@ class AttendanceService
         }
 
         if ($currentTime->lt($activeSession['end'])) {
-             throw ValidationException::withMessages([
+            $this->mqtt->publish('attendance', json_encode([
+                'user' => $rawAttendance->user,
+                'attendance' => $rawAttendance,
+                'status' => 'too_early_to_clock_out',
+                'message' => "Jadwal pulang Anda adalah pukul {$activeSession['end']->format('H:i')}."
+            ]));
+
+            throw ValidationException::withMessages([
                 'title' => 'BELUM WAKTUNYA PULANG',
                 'message' => "Jadwal pulang Anda adalah pukul {$activeSession['end']->format('H:i')}."
             ]);
         }
 
         $rawAttendance->update(['clock_out' => $currentTime]);
+
+        $this->mqtt->publish('attendance', json_encode([
+            'user' => $rawAttendance->user,
+            'attendance' => $rawAttendance,
+            'status' => 'clocked_out',
+            'message' => "Terima Kasih\n{$rawAttendance->user->name}\nAnda pulang pukul {$currentTime->format('H:i')} WIB."
+        ]));
 
         return [
             'success' => true,
@@ -137,6 +208,13 @@ class AttendanceService
     {
         $holiday = Holiday::whereDate('date', $date->toDateString())->first();
         if ($holiday) {
+            $this->mqtt->publish('attendance', json_encode([
+                'user' => $user,
+                'attendance' => null,
+                'status' => 'holiday',
+                'message' => "Tanggal {$date->toDateString()} adalah libur nasional: {$holiday->description}."
+            ]));
+
             throw ValidationException::withMessages([
                 'title' => 'HARI LIBUR NASIONAL',
                 'message' => "Tanggal {$date->toDateString()} adalah libur nasional: {$holiday->description}."
@@ -151,6 +229,13 @@ class AttendanceService
             ->first();
 
         if ($approvedLeave) {
+            $this->mqtt->publish('attendance', json_encode([
+                'user' => $user,
+                'attendance' => null,
+                'status' => 'on_leave',
+                'message' => "Hari ini anda cuti atau izin: {$approvedLeave->leaveType->name}."
+            ]));
+
             throw ValidationException::withMessages([
                 'title' => 'CUTI / IZIN',
                 'message' => "Hari ini anda cuti atau izin: {$approvedLeave->leaveType->name}."
