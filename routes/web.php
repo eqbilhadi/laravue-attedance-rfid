@@ -18,10 +18,12 @@ use App\Http\Controllers\MasterData\WorkScheduleController;
 use App\Http\Controllers\MasterData\WorkTimeController;
 use App\Http\Controllers\Reports\LateReportController;
 use App\Http\Controllers\Reports\MonthlyReportController;
+use App\Http\Controllers\Reports\TimesheetController;
 use App\Http\Controllers\RfidManagement\CardListController;
 use App\Http\Controllers\RfidManagement\DevicesController;
 use App\Http\Controllers\RfidManagement\LogScanController;
 use App\Http\Controllers\RfidManagement\RegisterNewCard;
+use App\Services\Mqtt\MqttService;
 
 /*
 |--------------------------------------------------------------------------
@@ -178,6 +180,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/late', [LateReportController::class, 'index'])->name('late.index');
         Route::post('/late/export', [LateReportController::class, 'export'])->name('late.export');
         Route::get('/late/export/download/{filename}', [LateReportController::class, 'downloadExport'])->name('late.export.download');
+
+        Route::get('/timesheet', [TimesheetController::class, 'index'])->name('timesheet.index');
+        Route::post('/timesheet/export', [TimesheetController::class, 'export'])->name('timesheet.export');
+        Route::get('/timesheet/export/download/{filename}', [TimesheetController::class, 'downloadExport'])->name('timesheet.export.download');
     });
 
     // Rute untuk streaming file dari storage

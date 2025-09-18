@@ -4,8 +4,10 @@ namespace Database\Seeders;
 
 use App\Models\Menu as ModelsMenu;
 use App\Models\Role;
+use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Cache;
 
 class Menu extends Seeder
 {
@@ -224,6 +226,42 @@ class Menu extends Seeder
                 'sort_num' => '23',
                 'is_divider' => false
             ],
+            [
+                'icon' => 'LineChart',
+                'label_name' => 'Reports',
+                'controller_name' => null,
+                'route_name' => 'reports.index',
+                'url' => 'reports',
+                'sort_num' => '24',
+                'is_divider' => true
+            ],
+            [
+                'icon' => 'CalendarDays',
+                'label_name' => 'Monthly Report',
+                'controller_name' => 'app\Http\Controllers\Reports\MonthlyReportController',
+                'route_name' => 'reports.monthly.index',
+                'url' => 'reports/monthly',
+                'sort_num' => '25',
+                'is_divider' => false
+            ],
+            [
+                'icon' => 'Clock',
+                'label_name' => 'Late Report',
+                'controller_name' => 'app\Http\Controllers\Reports\LateReportController',
+                'route_name' => 'reports.late.index',
+                'url' => 'reports/late',
+                'sort_num' => '26',
+                'is_divider' => false
+            ],
+            [
+                'icon' => 'ClipboardClock',
+                'label_name' => 'Timesheet',
+                'controller_name' => 'app\Http\Controllers\Reports\TimesheetController',
+                'route_name' => 'reports.timesheet.index',
+                'url' => 'reports/timesheet',
+                'sort_num' => '27',
+                'is_divider' => false
+            ],
         ];
 
         foreach ($menus as $menu) {
@@ -242,6 +280,10 @@ class Menu extends Seeder
             );
 
             $developer->menus()->syncWithoutDetaching($menuModel->id);
+        }
+
+        foreach (User::pluck('id') as $userId) {
+            Cache::forget("menus.{$userId}");
         }
     }
 }
