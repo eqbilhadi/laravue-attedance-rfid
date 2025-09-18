@@ -135,6 +135,9 @@ export interface Attendance {
     status: string;
     user: User;
     work_schedule: WorkSchedule;
+    date_string: string;
+    clock_in_time: string | null;
+    clock_out_time: string | null;
 }
 
 export interface LeaveRequest {
@@ -163,6 +166,8 @@ export interface SummaryCards {
 }
 
 export interface LiveAttendance {
+  user_id: string;
+  late_tolerance_minutes: string;
   user_name: string;
   avatar_url: string | null;
   clock_in: string;

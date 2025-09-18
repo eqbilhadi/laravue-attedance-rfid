@@ -174,6 +174,7 @@ class DashboardController extends Controller
             }
 
             $liveSummary[] = [
+                'user_id' => $user->id,
                 'user_name' => $user->name,
                 'avatar_url' => $user->avatar_url,
                 'clock_in' => $rawAttendance?->clock_in?->format('H:i') ?? '-',
@@ -181,6 +182,7 @@ class DashboardController extends Controller
                 'status' => $status,
                 'work_time_start' => $workTime->start_time,
                 'work_time_end' => $workTime->end_time,
+                'late_tolerance_minutes' => $scheduledStartTime->copy()->addMinutes($workTime->late_tolerance_minutes)->format('H:i'),
             ];
         }
         return $liveSummary;

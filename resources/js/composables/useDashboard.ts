@@ -11,6 +11,7 @@ export function useDashboard() {
   const isLoading = ref(true);
 
   let channel: ReturnType<typeof supabase.channel> | null = null;
+  let interval: ReturnType<typeof setInterval> | undefined;
 
   // --- Fetch Semua Data ---
   async function fetchDashboardData() {
@@ -48,10 +49,26 @@ export function useDashboard() {
     channel = supabase.channel('public:trx_raw_attendances');
 
     channel
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'trx_raw_attendances' }, (payload) => {
-        console.log('Realtime perubahan terdeteksi:', payload);
-        fetchDashboardData();
-      })
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "trx_raw_attendances" },
+        (payload) => {
+          updateLiveAttendance({
+            user_id: payload.new.user_id,
+            clock_in: payload.new.clock_in,
+          });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "trx_raw_attendances" },
+        (payload) => {
+          updateLiveAttendance({
+            user_id: payload.new.user_id,
+            clock_out: payload.new.clock_out,
+          });
+        }
+      )
       .subscribe((status) => {
         console.log('Channel status:', status);
 
@@ -65,14 +82,100 @@ export function useDashboard() {
       });
   }
 
+  function updateLiveAttendance({ user_id, clock_in, clock_out }: { user_id: string; clock_in?: string; clock_out?: string }) {
+    const idx = liveAttendance.value.findIndex((emp) => emp.user_id === user_id);
+    if (idx === -1) return; // tidak ketemu, skip
+
+    const emp = liveAttendance.value[idx];
+
+    if (clock_in) {
+      const time = new Date(clock_in);
+      const formattedClockIn = time.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+      emp.clock_in = formattedClockIn;
+
+      // status late/present
+      if (formattedClockIn > emp.late_tolerance_minutes) {
+        emp.status = "Late";
+      } else {
+        emp.status = "Present";
+      }
+    }
+
+    if (clock_out) {
+      const time = new Date(clock_out);
+      const formattedClockOut = time.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+      emp.clock_out = formattedClockOut;
+      emp.status = "Checked Out";
+    }
+
+    // Assign kembali supaya Vue reaktif (hanya perlu jika array kamu tidak pakai proxy deep)
+    liveAttendance.value[idx] = { ...emp };
+    updateSummaryCards();
+  }
+
+  function updateSummaryCards() {
+    if (!summaryCards.value) return;
+
+    const total = liveAttendance.value.length;
+    const present = liveAttendance.value.filter(emp =>
+      ["Present", "Late", "Checked Out"].includes(emp.status)
+    ).length;
+    const late = liveAttendance.value.filter(emp => emp.status === "Late").length;
+    const absent = liveAttendance.value.filter(emp => emp.status === "Absent").length;
+    const notYet = liveAttendance.value.filter(emp => emp.status === "Not Yet Arrived").length;
+
+    summaryCards.value = {
+      ...summaryCards.value,
+      scheduled_today: total,
+      present_today: present,
+      late_today: late,
+      absent_today: absent,
+      not_yet_arrived: notYet,
+      // biarkan field lain tetap seperti sebelumnya
+    };
+  }
+
+  function autoMarkAbsent() {
+    const now = new Date();
+    let hasChanged = false;
+    console.log("test absen");
+
+    liveAttendance.value = liveAttendance.value.map((emp) => {
+      if (emp.clock_in === "-") {
+        const [h, m] = emp.work_time_end.split(":");
+        const endTime = new Date();
+        endTime.setHours(Number(h), Number(m), 0, 0);
+
+        if (now > endTime && emp.status !== "Absent") {
+          hasChanged = true;
+          return { ...emp, status: "Absent" };
+        }
+      }
+      return emp;
+    });
+
+    if (hasChanged) updateSummaryCards();
+  }
+
   // --- Lifecycle Hooks ---
   onMounted(() => {
     fetchDashboardData();
     setupRealtime();
+    autoMarkAbsent(); // jalankan sekali saat mount
+    interval = setInterval(autoMarkAbsent, 60 * 1000);
   });
 
   onUnmounted(() => {
     if (channel) supabase.removeChannel(channel);
+    if (interval) clearInterval(interval);
   });
 
   return {
