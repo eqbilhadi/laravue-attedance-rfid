@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Enum\AttendanceStatus;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class Attendance extends Model
 {
@@ -62,5 +63,26 @@ class Attendance extends Model
     public function workSchedule(): BelongsTo
     {
         return $this->belongsTo(WorkSchedule::class, 'work_schedule_id');
+    }
+
+    protected function dateString(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->date->toDateString(),
+        );
+    }
+
+    protected function clockInTime(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->clock_in?->format('H:i'),
+        );
+    }
+
+    protected function clockOutTime(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->clock_out?->format('H:i'),
+        );
     }
 }
