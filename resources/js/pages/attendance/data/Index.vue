@@ -320,7 +320,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                     <TableCell class="text-center">
                       <div class="flex flex-col items-center gap-1">
                         <Badge :variant="statusVariant(att.status)" class="items-center">
-                          {{ att.status }} <div v-if="att.late_minutes > 0">{{ att.late_minutes }} mins</div>
+                          {{ att.status }} <div v-if="att.status == 'Late'">{{ att.late_minutes }} mins</div>
                         </Badge>
                       </div>
                     </TableCell>
