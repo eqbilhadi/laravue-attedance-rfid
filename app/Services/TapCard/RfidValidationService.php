@@ -34,7 +34,12 @@ class RfidValidationService
      */
     public function validateCard(string $cardUid): UserRfid
     {
-        $userRfid = UserRfid::where('uid', $cardUid)->with('user')->first();
+        $userRfid = UserRfid::where('uid', $cardUid)
+            ->with([
+                'user.userSchedules.workSchedule.days',
+                'user.leaveRequests.leaveType'
+            ])
+            ->first();
         if (!$userRfid || !$userRfid->user) {
             throw ValidationException::withMessages([
                 'title' => 'KARTU TIDAK TERDAFTAR',
