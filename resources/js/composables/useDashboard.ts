@@ -146,15 +146,24 @@ export function useDashboard() {
   function autoMarkAbsent() {
     const now = new Date();
     let hasChanged = false;
-    console.log("test absen");
 
     liveAttendance.value = liveAttendance.value.map((emp) => {
-      if (emp.clock_in === "-") {
-        const [h, m] = emp.work_time_end.split(":");
-        const endTime = new Date();
-        endTime.setHours(Number(h), Number(m), 0, 0);
+      // Hanya proses karyawan yang belum clock-in dan statusnya belum Absent
+      if (emp.clock_in === "-" && emp.status !== "Absent") {
+        const [startH] = emp.work_time_start.split(":");
+        const [endH, endM] = emp.work_time_end.split(":");
 
-        if (now > endTime && emp.status !== "Absent") {
+        const endTime = new Date();
+        endTime.setHours(Number(endH), Number(endM), 0, 0);
+
+        const startHour = Number(startH);
+        const endHour = Number(endH);
+
+        if (startHour > endHour) {
+          endTime.setDate(endTime.getDate() + 1);
+        }
+
+        if (now > endTime) {
           hasChanged = true;
           return { ...emp, status: "Absent" };
         }
@@ -162,14 +171,23 @@ export function useDashboard() {
       return emp;
     });
 
-    if (hasChanged) updateSummaryCards();
+    if (hasChanged) {
+      updateSummaryCards();
+    }
   }
+
+  onMounted(() => {
+    fetchDashboardData();
+    setupRealtime();
+    autoMarkAbsent();
+    const interval = setInterval(autoMarkAbsent, 60 * 1000);
+  });
 
   // --- Lifecycle Hooks ---
   onMounted(() => {
     fetchDashboardData();
     setupRealtime();
-    autoMarkAbsent(); // jalankan sekali saat mount
+    autoMarkAbsent();
     interval = setInterval(autoMarkAbsent, 60 * 1000);
   });
 
