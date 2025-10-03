@@ -36,14 +36,15 @@ class RfidProcessingService
         // Gunakan waktu sekarang atau waktu yang di-hardcode untuk testing
         $currentTime = now();
 
-        // 1. Selalu catat setiap tap
+        // 1. Validasi Perangkat & Kartu
+        $this->validator->validateDevice($deviceUid);
+        
+        // 2. Selalu catat setiap tap
         $rfidScan = RfidScan::create([
             "device_uid" => $deviceUid,
             "card_uid" => $cardUid,
         ]);
-
-        // 2. Validasi Perangkat & Kartu
-        $this->validator->validateDevice($deviceUid);
+        
         $userRfid = $this->validator->validateCard($cardUid);
         $user = $userRfid->user;
 
