@@ -20,6 +20,7 @@ const props = defineProps<{
   placeholder?: string
   groupLabel?: string
   clearable?: boolean // Prop baru untuk mengaktifkan fitur
+  disabled?: boolean
 }>()
 
 const emit = defineEmits(['update:modelValue'])
@@ -30,6 +31,7 @@ const emit = defineEmits(['update:modelValue'])
     <Select
       :modelValue="modelValue?.toString()"
       @update:modelValue="emit('update:modelValue', $event)"
+      :disabled="disabled"
     >
       <SelectTrigger
         :class="cn(

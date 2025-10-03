@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('sys_user_rfids', function (Blueprint $table) {
             $table->id();
-            $table->foreignUuid('user_id')->constrained('sys_users', 'id')->unique();
+            $table->foreignUuid('user_id')->constrained('sys_users', 'id')->onDelete('cascade')->unique();
             $table->string('uid')->unique();
             $table->timestamps();
         });
