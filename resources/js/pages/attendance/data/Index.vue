@@ -154,10 +154,19 @@ const statusVariant = (status: string) => {
 
 const calculateWorkHours = (att: Attendance): string => {
   if (!att.clock_in || !att.clock_out) return "-";
+
+  const startTime = new Date(att.clock_in);
+  let endTime = new Date(att.clock_out);
+
+  if (endTime < startTime) {
+    endTime.setDate(endTime.getDate() + 1);
+  }
+
   const duration = intervalToDuration({
-    start: new Date(att.clock_in),
-    end: new Date(att.clock_out),
+    start: startTime,
+    end: endTime,
   });
+
   return `${duration.hours || 0}h ${duration.minutes || 0}m`;
 };
 
