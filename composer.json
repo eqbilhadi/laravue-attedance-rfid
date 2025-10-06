@@ -16,6 +16,7 @@
         "laravel/tinker": "^2.10.1",
         "maatwebsite/excel": "^3.1",
         "php-mqtt/client": "^2.2",
+        "spatie/laravel-backup": "^9.3",
         "spatie/laravel-permission": "^6.18",
         "tightenco/ziggy": "^2.4"
     },
