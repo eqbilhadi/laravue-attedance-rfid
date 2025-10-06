@@ -176,13 +176,6 @@ export function useDashboard() {
     }
   }
 
-  onMounted(() => {
-    fetchDashboardData();
-    setupRealtime();
-    autoMarkAbsent();
-    const interval = setInterval(autoMarkAbsent, 60 * 1000);
-  });
-
   // --- Lifecycle Hooks ---
   onMounted(() => {
     fetchDashboardData();
