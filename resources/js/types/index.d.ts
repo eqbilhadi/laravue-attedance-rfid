@@ -209,3 +209,11 @@ export interface QuickStats {
   employee_of_the_month: EmployeeOfTheMonth | null;
   most_late_employees: MostLateEmployee[];
 }
+
+export interface DatabaseBackup {
+  id: string;
+  filename: string;
+  disk: string;
+  size_in_kb: number;
+  created_at: string;
+}

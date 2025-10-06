@@ -23,6 +23,7 @@ use App\Http\Controllers\RfidManagement\CardListController;
 use App\Http\Controllers\RfidManagement\DevicesController;
 use App\Http\Controllers\RfidManagement\LogScanController;
 use App\Http\Controllers\RfidManagement\RegisterNewCard;
+use App\Http\Controllers\Settings\BackupController;
 use App\Services\Mqtt\MqttService;
 
 /*
@@ -184,6 +185,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/timesheet', [TimesheetController::class, 'index'])->name('timesheet.index');
         Route::post('/timesheet/export', [TimesheetController::class, 'export'])->name('timesheet.export');
         Route::get('/timesheet/export/download/{filename}', [TimesheetController::class, 'downloadExport'])->name('timesheet.export.download');
+    });
+
+    Route::prefix('settings')->name('settings.')->middleware(['auth'])->group(function () {
+        Route::get('backup', [BackupController::class, 'index'])->name('backup.index');
+        Route::post('backup', [BackupController::class, 'store'])->name('backup.store');
+        Route::get('backup/{backup}/download', [BackupController::class, 'download'])->name('backup.download');
+        Route::delete('backup/{backup}', [BackupController::class, 'destroy'])->name('backup.destroy');
     });
 
     // Rute untuk streaming file dari storage

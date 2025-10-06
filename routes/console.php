@@ -9,3 +9,5 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('attendance:process')->dailyAt('00:05');
+
+Schedule::command('db:backup-custom')->weeklyOn(0, '1:00');

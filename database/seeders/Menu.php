@@ -174,7 +174,7 @@ class Menu extends Seeder
             ],
             [
                 'icon' => 'ClipboardCheck',
-                'label_name' => 'Attendance Management',
+                'label_name' => 'Attendance & Leave',
                 'controller_name' => null,
                 'route_name' => 'attendance.index',
                 'url' => 'attendance',
@@ -200,21 +200,12 @@ class Menu extends Seeder
                 'is_divider' => false
             ],
             [
-                'icon' => 'Plane',
-                'label_name' => 'Leave Management',
-                'controller_name' => null,
-                'route_name' => 'leave.index',
-                'url' => 'leave',
-                'sort_num' => '21',
-                'is_divider' => true
-            ],
-            [
                 'icon' => 'ClipboardSignature',
                 'label_name' => 'Leave Request',
                 'controller_name' => 'app\Http\Controllers\Leave\LeaveRequestController',
                 'route_name' => 'leave.request.index',
                 'url' => 'leave/request',
-                'sort_num' => '22',
+                'sort_num' => '21',
                 'is_divider' => false
             ],
             [
@@ -223,7 +214,7 @@ class Menu extends Seeder
                 'controller_name' => 'app\Http\Controllers\Leave\LeaveApprovalController',
                 'route_name' => 'leave.approval.index',
                 'url' => 'leave/approval',
-                'sort_num' => '23',
+                'sort_num' => '22',
                 'is_divider' => false
             ],
             [
@@ -232,7 +223,7 @@ class Menu extends Seeder
                 'controller_name' => null,
                 'route_name' => 'reports.index',
                 'url' => 'reports',
-                'sort_num' => '24',
+                'sort_num' => '23',
                 'is_divider' => true
             ],
             [
@@ -241,7 +232,7 @@ class Menu extends Seeder
                 'controller_name' => 'app\Http\Controllers\Reports\MonthlyReportController',
                 'route_name' => 'reports.monthly.index',
                 'url' => 'reports/monthly',
-                'sort_num' => '25',
+                'sort_num' => '24',
                 'is_divider' => false
             ],
             [
@@ -250,7 +241,7 @@ class Menu extends Seeder
                 'controller_name' => 'app\Http\Controllers\Reports\LateReportController',
                 'route_name' => 'reports.late.index',
                 'url' => 'reports/late',
-                'sort_num' => '26',
+                'sort_num' => '25',
                 'is_divider' => false
             ],
             [
@@ -259,9 +250,28 @@ class Menu extends Seeder
                 'controller_name' => 'app\Http\Controllers\Reports\TimesheetController',
                 'route_name' => 'reports.timesheet.index',
                 'url' => 'reports/timesheet',
-                'sort_num' => '27',
+                'sort_num' => '26',
                 'is_divider' => false
             ],
+            [
+                'icon' => 'Settings',
+                'label_name' => 'Settings',
+                'controller_name' => null,
+                'route_name' => 'settings.index',
+                'url' => 'settings',
+                'sort_num' => '27',
+                'is_divider' => true
+            ],
+            [
+                'icon' => 'DatabaseBackup',
+                'label_name' => 'Database Backup',
+                'controller_name' => 'app\Http\Controllers\Settings\BackupController',
+                'route_name' => 'settings.backup.index',
+                'url' => 'settings/backup',
+                'sort_num' => '28',
+                'is_divider' => false
+            ],
+
         ];
 
         foreach ($menus as $menu) {
