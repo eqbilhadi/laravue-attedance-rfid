@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { router, Head, Link } from '@inertiajs/vue3'
+import { router, Head, Link, usePage } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
-import { type BreadcrumbItem } from '@/types'
+import { SharedData, type BreadcrumbItem } from '@/types'
 import { watchDebounced } from '@vueuse/core'
 import Input from '@/components/ui/input/Input.vue'
 import { Search } from 'lucide-vue-next'
@@ -53,6 +53,7 @@ const props = defineProps<{
   groups: { label: string; value: string }[]
 }>()
 
+const page = usePage<SharedData>();
 const search = ref(props.filters.search ?? '')
 const group = ref(props.filters.group ?? '')
 
@@ -118,7 +119,6 @@ function openEdit(permission: Permission) {
   editingPermission.value = permission
   modalOpen.value = true
 }
-
 </script>
 
 <template>
@@ -131,13 +131,17 @@ function openEdit(permission: Permission) {
           <div class="flex items-center justify-between">
             <div class="flex flex-col gap-1">
               <CardTitle>Permission Management</CardTitle>
-              <CardDescription>View and organize permissions that control user access to features.</CardDescription>
+              <CardDescription
+                >View and organize permissions that control user access to
+                features.</CardDescription
+              >
             </div>
             <Button
               class="bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2"
               @click="openCreate"
+              v-if="page.props.auth.can['create permission']"
             >
-              <CirclePlus class="mr-1" /> 
+              <CirclePlus class="mr-1" />
               <span class="hidden lg:inline">Add Permission</span>
             </Button>
           </div>
@@ -177,14 +181,26 @@ function openEdit(permission: Permission) {
         </CardHeader>
         <CardContent>
           <!-- Table -->
-          <div class="overflow-hidden rounded-lg border border-gray-200 mb-3 dark:border-zinc-800">
+          <div
+            class="overflow-hidden rounded-lg border border-gray-200 mb-3 dark:border-zinc-800"
+          >
             <Table>
               <TableHeader class="bg-gray-100 text-left text-gray-700 dark:bg-zinc-800">
                 <TableRow>
-                  <TableHead class="ps-3 text-center w-1 dark:text-foreground">No</TableHead>
+                  <TableHead class="ps-3 text-center w-1 dark:text-foreground"
+                    >No</TableHead
+                  >
                   <TableHead class="dark:text-foreground">Permission Name</TableHead>
                   <TableHead class="dark:text-foreground">Group</TableHead>
-                  <TableHead class="text-right pe-3 dark:text-foreground">Action</TableHead>
+                  <TableHead
+                    class="text-right pe-3 dark:text-foreground"
+                    v-if="
+                      page.props.auth.can['edit permission'] ||
+                      page.props.auth.can['delete permission']
+                    "
+                  >
+                    Action
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -195,16 +211,28 @@ function openEdit(permission: Permission) {
                     }}</TableCell>
                     <TableCell>{{ menu.name }}</TableCell>
                     <TableCell>{{ menu.group }}</TableCell>
-                    <TableCell class="text-right pe-3">
+                    <TableCell
+                      class="text-right pe-3"
+                      v-if="
+                        page.props.auth.can['edit permission'] ||
+                        page.props.auth.can['delete permission']
+                      "
+                    >
                       <div class="flex justify-end gap-1">
                         <Button
                           variant="outline"
                           size="icon"
                           @click="openEdit(menu)"
+                          v-if="page.props.auth.can['edit permission']"
                         >
                           <Pencil class="w-4 h-4" stroke="currentColor" />
                         </Button>
-                        <Button variant="outline" size="icon" @click="handleDelete(menu)">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          @click="handleDelete(menu)"
+                          v-if="page.props.auth.can['delete permission']"
+                        >
                           <Trash2 class="w-4 h-4" stroke="currentColor" />
                         </Button>
                       </div>
@@ -230,10 +258,7 @@ function openEdit(permission: Permission) {
 
       <!-- Pagination -->
     </div>
-    <ModalForm
-      v-model="modalOpen"
-      :edit-item="editingPermission"
-    />
+    <ModalForm v-model="modalOpen" :edit-item="editingPermission" />
     <DeleteConfirmDialog ref="deleteDialog" />
   </AppLayout>
 </template>

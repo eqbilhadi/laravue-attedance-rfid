@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { router, Head, Link } from '@inertiajs/vue3'
+import { router, Head, Link, usePage } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
-import { type BreadcrumbItem } from '@/types'
+import { SharedData, type BreadcrumbItem } from '@/types'
 import { watchDebounced } from '@vueuse/core'
 import Input from '@/components/ui/input/Input.vue'
 import { Search } from 'lucide-vue-next'
@@ -59,6 +59,8 @@ const props = defineProps<{
 }>()
 
 const menus = ref<Menu[]>(props.data.data)
+
+const page = usePage<SharedData>();
 
 useSupabaseTableSync<Menu>('sys_menus', menus)
 
@@ -141,13 +143,14 @@ const goToSortPage = () => {
               <CardDescription>Manage the structure and appearance of navigation items in the application.</CardDescription>
             </div>
             <div class="grid gap-3 grid-cols-2">
-              <Button @click="goToSortPage" class="cursor-pointer">
+              <Button @click="goToSortPage" class="cursor-pointer" v-if="page.props.auth.can['sort menu']">
                 <ArrowDownUp class="text-primary-foreground mr-0.5" />
                 <span class="hidden lg:inline">Sort Navigation</span>
               </Button>
               <Link
                 :href="route('rbac.nav.create')"
                 class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 h-9 px-4 py-2 has-[>svg]:px-3"
+                v-if="page.props.auth.can['create menu']"
               >
                 <CirclePlus class="text-primary-foreground mr-0.5" /> 
                 <span class="hidden lg:inline">Add Navigation</span>
@@ -201,7 +204,12 @@ const goToSortPage = () => {
                   <TableHead class="dark:text-foreground">Controller</TableHead>
                   <TableHead class="dark:text-foreground">Route</TableHead>
                   <TableHead class="dark:text-foreground">URL</TableHead>
-                  <TableHead class="text-right pe-3 dark:text-foreground">Action</TableHead>
+                  <TableHead 
+                    class="text-right pe-3 dark:text-foreground" 
+                    v-if="page.props.auth.can['edit menu'] || page.props.auth.can['delete menu']"
+                  >
+                    Action
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -211,11 +219,15 @@ const goToSortPage = () => {
                       <TableCell :colspan="4" class="font-semibold ps-3 text-center">
                         {{ menu.label_name }}
                       </TableCell>
-                      <TableCell class="text-right pe-3">
+                      <TableCell 
+                        class="text-right pe-3"
+                        v-if="page.props.auth.can['edit menu'] || page.props.auth.can['delete menu']"
+                      >
                         <div class="flex justify-end gap-1">
                           <Link
                             :href="route('rbac.nav.edit', { id: menu.id })"
                             class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 size-9"
+                            v-if="page.props.auth.can['edit menu']"
                           >
                             <Pencil class="w-4 h-4" stroke="currentColor" />
                           </Link>
@@ -223,6 +235,7 @@ const goToSortPage = () => {
                             variant="outline"
                             size="icon" class="cursor-pointer"
                             @click="handleDelete(menu)"
+                            v-if="page.props.auth.can['delete menu']"
                           >
                             <Trash2 class="w-4 h-4" stroke="currentColor" />
                           </Button>
@@ -239,11 +252,15 @@ const goToSortPage = () => {
                       <TableCell>{{ menu.controller_name }}</TableCell>
                       <TableCell>{{ menu.route_name }}</TableCell>
                       <TableCell>{{ menu.url }}</TableCell>
-                      <TableCell class="text-right pe-3">
+                      <TableCell 
+                        class="text-right pe-3"
+                        v-if="page.props.auth.can['edit menu'] || page.props.auth.can['delete menu']"
+                      >
                         <div class="flex justify-end gap-1">
                           <Link
                             :href="route('rbac.nav.edit', { id: menu.id })"
                             class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 size-9"
+                            v-if="page.props.auth.can['edit menu']"
                           >
                             <Pencil class="w-4 h-4" stroke="currentColor" />
                           </Link>
@@ -251,6 +268,7 @@ const goToSortPage = () => {
                             variant="outline"
                             size="icon" class="cursor-pointer"
                             @click="handleDelete(menu)"
+                            v-if="page.props.auth.can['delete menu']"
                           >
                             <Trash2 class="w-4 h-4" stroke="currentColor" />
                           </Button>
